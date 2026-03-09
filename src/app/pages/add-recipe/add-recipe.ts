@@ -126,20 +126,49 @@ export class AddRecipePage {
 
     this.parsingIngredients.set(true);
     this.error.set(null);
+    this.ingredients.set([]); // Clear existing
 
-    const { items, error } = await this.supabase.parseRecipeText(text, 'ingredients');
+    let fullJson = '';
+    let extractedCount = 0;
+
+    for await (const chunk of this.supabase.parseRecipeTextStream(text, 'ingredients')) {
+      if (chunk.error) {
+        this.parsingIngredients.set(false);
+        this.error.set('Parsen mislukt: ' + chunk.error);
+        return;
+      }
+      if (chunk.delta) {
+        fullJson += chunk.delta;
+
+        // Try to extract complete ingredient objects as they come in
+        const matches = fullJson.matchAll(
+          /\{"name":"([^"]+)","amount":(null|\d+(?:\.\d+)?),"unit":"([^"]*)"\}/g
+        );
+        const items: IngredientForm[] = [];
+        for (const match of matches) {
+          items.push({
+            name: match[1],
+            amount: match[2] === 'null' ? null : parseFloat(match[2]),
+            unit: match[3],
+          });
+        }
+        // Only update if we found new items
+        if (items.length > extractedCount) {
+          extractedCount = items.length;
+          this.ingredients.set(items);
+        }
+      }
+    }
 
     this.parsingIngredients.set(false);
 
-    if (error) {
-      this.error.set('Parsen mislukt: ' + error);
-      return;
-    }
-
-    if (items.length > 0) {
-      const parsedIngredients = items as { name: string; amount: number | null; unit: string }[];
-      this.ingredients.set(parsedIngredients);
+    // Final validation with proper JSON parsing
+    try {
+      const parsed = JSON.parse(fullJson) as { items: IngredientForm[] };
+      this.ingredients.set(parsed.items);
       this.rawIngredientsText.set('');
+    } catch {
+      this.error.set('Parsen mislukt: ongeldige response');
     }
   }
 
@@ -149,20 +178,45 @@ export class AddRecipePage {
 
     this.parsingSteps.set(true);
     this.error.set(null);
+    this.steps.set([]); // Clear existing
 
-    const { items, error } = await this.supabase.parseRecipeText(text, 'steps');
+    let fullJson = '';
+    let extractedCount = 0;
+
+    for await (const chunk of this.supabase.parseRecipeTextStream(text, 'steps')) {
+      if (chunk.error) {
+        this.parsingSteps.set(false);
+        this.error.set('Parsen mislukt: ' + chunk.error);
+        return;
+      }
+      if (chunk.delta) {
+        fullJson += chunk.delta;
+
+        // Try to extract complete step objects as they come in
+        const matches = fullJson.matchAll(/\{"description":"((?:[^"\\]|\\.)*)"\}/g);
+        const items: StepForm[] = [];
+        for (const match of matches) {
+          // Unescape JSON string
+          const desc = match[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+          items.push({ description: desc });
+        }
+        // Only update if we found new items
+        if (items.length > extractedCount) {
+          extractedCount = items.length;
+          this.steps.set(items);
+        }
+      }
+    }
 
     this.parsingSteps.set(false);
 
-    if (error) {
-      this.error.set('Parsen mislukt: ' + error);
-      return;
-    }
-
-    if (items.length > 0) {
-      const parsedSteps = items as { description: string }[];
-      this.steps.set(parsedSteps);
+    // Final validation with proper JSON parsing
+    try {
+      const parsed = JSON.parse(fullJson) as { items: StepForm[] };
+      this.steps.set(parsed.items);
       this.rawStepsText.set('');
+    } catch {
+      this.error.set('Parsen mislukt: ongeldige response');
     }
   }
 

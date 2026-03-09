@@ -208,26 +208,68 @@ export class SupabaseService {
     return { data: recipeData, error: null };
   }
 
-  // ============ AI PARSING ============
-  async parseRecipeText(
+  // ============ AI PARSING (STREAMING) ============
+  async *parseRecipeTextStream(
     text: string,
     type: 'ingredients' | 'steps'
-  ): Promise<{
-    items: { name: string; amount: number | null; unit: string }[] | { description: string }[];
-    error: string | null;
-  }> {
-    const { data, error } = await this.supabase.functions.invoke('parse-recipe', {
-      body: { text, type },
+  ): AsyncGenerator<{ delta?: string; done?: boolean; error?: string }> {
+    const url = `${environment.supabase.url}/functions/v1/parse-recipe`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: environment.supabase.anonKey,
+      },
+      body: JSON.stringify({ text, type }),
     });
 
-    if (error) {
-      return { items: [], error: error.message };
+    if (!response.ok) {
+      yield { error: `HTTP error: ${response.status}` };
+      return;
     }
 
-    if (data.error) {
-      return { items: [], error: data.error };
+    const reader = response.body?.getReader();
+    if (!reader) {
+      yield { error: 'No response body' };
+      return;
     }
 
-    return { items: data.items || [], error: null };
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // Parse SSE messages
+      const lines = buffer.split('\n\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') {
+            yield { done: true };
+            return;
+          }
+
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.error) {
+              yield { error: parsed.error };
+              return;
+            }
+            if (parsed.delta) {
+              yield { delta: parsed.delta };
+            }
+          } catch {
+            // Ignore parse errors
+          }
+        }
+      }
+    }
   }
 }

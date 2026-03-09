@@ -67,38 +67,66 @@ Deno.serve(async (req: Request) => {
 
     const openai = new OpenAI({ apiKey });
 
-    let items: ParsedIngredient[] | ParsedStep[];
+    const schema = type === 'ingredients' ? IngredientsResponseSchema : StepsResponseSchema;
+    const schemaName = type === 'ingredients' ? 'ingredients' : 'steps';
+    const prompt = type === 'ingredients' ? INGREDIENTS_PROMPT : STEPS_PROMPT;
+    const userMessage =
+      type === 'ingredients'
+        ? `Parse de volgende ingrediënten:\n\n${text}`
+        : `Parse de volgende bereidingsstappen:\n\n${text}`;
 
-    if (type === 'ingredients') {
-      const response = await openai.responses.parse({
-        model: 'gpt-4o-mini',
-        input: [
-          { role: 'system', content: INGREDIENTS_PROMPT },
-          { role: 'user', content: `Parse de volgende ingrediënten:\n\n${text}` },
-        ],
-        text: {
-          format: zodTextFormat(IngredientsResponseSchema, 'ingredients'),
-        },
-      });
+    // Create streaming response
+    const stream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
 
-      items = response.output_parsed?.items ?? [];
-    } else {
-      const response = await openai.responses.parse({
-        model: 'gpt-4o-mini',
-        input: [
-          { role: 'system', content: STEPS_PROMPT },
-          { role: 'user', content: `Parse de volgende bereidingsstappen:\n\n${text}` },
-        ],
-        text: {
-          format: zodTextFormat(StepsResponseSchema, 'steps'),
-        },
-      });
+        try {
+          const openaiStream = openai.responses.stream({
+            model: 'gpt-4o-mini',
+            input: [
+              { role: 'system', content: prompt },
+              { role: 'user', content: userMessage },
+            ],
+            text: {
+              format: zodTextFormat(schema, schemaName),
+            },
+          });
 
-      items = response.output_parsed?.items ?? [];
-    }
+          openaiStream.on('response.output_text.delta', (event) => {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ delta: event.delta })}\n\n`)
+            );
+          });
 
-    return new Response(JSON.stringify({ items }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          openaiStream.on('response.output_text.done', () => {
+            controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
+            controller.close();
+          });
+
+          openaiStream.on('response.error', (event) => {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ error: String(event.error) })}\n\n`)
+            );
+            controller.close();
+          });
+
+          // Wait for stream to complete
+          await openaiStream.finalResponse();
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Stream error';
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`));
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+      },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
