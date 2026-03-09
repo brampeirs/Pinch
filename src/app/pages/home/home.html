@@ -1,0 +1,45 @@
+<main class="home">
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container hero__container">
+      <h1 class="hero__title">Alleen maar<br />lekkere recepten</h1>
+      <p class="hero__subtitle">Ontdek eenvoudige en heerlijke gerechten voor elke dag</p>
+      <div class="hero__search">
+        <input type="text" placeholder="Zoek naar recepten..." />
+        <button class="btn btn--primary">Zoeken</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Latest Recipes -->
+  <section class="section">
+    <div class="container">
+      <div class="section__header">
+        <h2>Nieuwste recepten</h2>
+        <a routerLink="/recipes" class="section__link">Bekijk alles →</a>
+      </div>
+      <div class="recipe-grid">
+        @for (recipe of recipes; track recipe.id) {
+          <app-recipe-card [recipe]="recipe" />
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Categories -->
+  <section class="section section--alt">
+    <div class="container">
+      <div class="section__header">
+        <h2>Categorieën</h2>
+      </div>
+      <div class="categories">
+        @for (category of categories; track category.name) {
+          <a [routerLink]="['/categories', category.slug]" class="category-card">
+            <span class="category-card__emoji">{{ category.emoji }}</span>
+            <span class="category-card__name">{{ category.name }}</span>
+          </a>
+        }
+      </div>
+    </div>
+  </section>
+</main>
