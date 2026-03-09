@@ -1,6 +1,22 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { SupabaseService } from '../../services/supabase.service';
+import { Tables } from '../../models/database.types';
 
+// Database types
+type DbRecipe = Tables<'recipes'>;
+type DbCategory = Tables<'categories'>;
+type DbIngredient = Tables<'ingredients'>;
+type DbStep = Tables<'recipe_steps'>;
+
+// Extended recipe with joined data
+interface RecipeWithDetails extends DbRecipe {
+  category: DbCategory | null;
+  ingredients: DbIngredient[];
+  recipe_steps: DbStep[];
+}
+
+// UI-friendly interfaces
 interface Ingredient {
   amount: number;
   unit: string;
@@ -31,68 +47,82 @@ interface RecipeDetail {
   templateUrl: './recipe-detail.html',
   styleUrl: './recipe-detail.scss',
 })
-export class RecipeDetailPage {
+export class RecipeDetailPage implements OnInit {
   private route = inject(ActivatedRoute);
+  private supabase = inject(SupabaseService);
 
   servings = signal(2);
+  recipe = signal<RecipeDetail | null>(null);
+  loading = signal(true);
+  error = signal<string | null>(null);
 
-  // Mock data - will be replaced with Supabase later
-  recipe = signal<RecipeDetail>({
-    id: '1',
-    title: 'Pasta Carbonara',
-    description:
-      'De klassieke Italiaanse pasta met een romige saus van ei, Parmezaanse kaas en krokant gebakken spek. Eenvoudig maar onweerstaanbaar lekker.',
-    imageUrl:
-      'https://images.unsplash.com/photo-1612874742237-6526221588e3?w=1200',
-    category: 'Pasta',
-    prepTime: 10,
-    cookTime: 20,
-    servings: 2,
-    ingredients: [
-      { amount: 200, unit: 'g', name: 'Spaghetti' },
-      { amount: 100, unit: 'g', name: 'Pancetta of spekblokjes' },
-      { amount: 2, unit: 'x', name: 'Eigeel' },
-      { amount: 50, unit: 'g', name: 'Parmezaanse kaas' },
-      { amount: 1, unit: 'teen', name: 'Knoflook' },
-      { amount: 1, unit: 'el', name: 'Olijfolie' },
-      { amount: 1, unit: 'snuf', name: 'Zwarte peper' },
-    ],
-    steps: [
-      {
-        step: 1,
-        description:
-          'Kook de spaghetti volgens de verpakking in ruim gezouten water.',
-      },
-      {
-        step: 2,
-        description:
-          'Bak de pancetta in een koekenpan met olijfolie tot het krokant is. Voeg de knoflook toe en bak 1 minuut mee.',
-      },
-      {
-        step: 3,
-        description:
-          'Klop de eidooiers los met de Parmezaanse kaas en peper in een kom.',
-      },
-      {
-        step: 4,
-        description:
-          'Giet de pasta af en bewaar een kopje pastawater. Voeg de pasta toe aan de pan met pancetta.',
-      },
-      {
-        step: 5,
-        description:
-          'Haal de pan van het vuur en roer het ei-kaasmengsel erdoor. Voeg pastawater toe voor een romige saus. Direct serveren!',
-      },
-    ],
+  async ngOnInit() {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      await this.loadRecipe(id);
+    } else {
+      this.error.set('Geen recept ID gevonden.');
+      this.loading.set(false);
+    }
+  }
+
+  private async loadRecipe(id: string) {
+    this.loading.set(true);
+    this.error.set(null);
+
+    try {
+      const { data, error } = await this.supabase.getRecipeById(id);
+
+      if (error) throw error;
+      if (!data) throw new Error('Recept niet gevonden');
+
+      const recipeData = data as RecipeWithDetails;
+
+      // Map database recipe to UI format
+      const mappedRecipe: RecipeDetail = {
+        id: recipeData.id,
+        title: recipeData.title,
+        description: recipeData.description || '',
+        imageUrl: recipeData.image_url || '',
+        category: recipeData.category?.name || '',
+        prepTime: recipeData.prep_time || 0,
+        cookTime: recipeData.cook_time || 0,
+        servings: recipeData.servings || 2,
+        ingredients: (recipeData.ingredients || [])
+          .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+          .map((ing) => ({
+            amount: Number(ing.amount) || 0,
+            unit: ing.unit || '',
+            name: ing.name,
+          })),
+        steps: (recipeData.recipe_steps || [])
+          .sort((a, b) => (a.step_number || 0) - (b.step_number || 0))
+          .map((step) => ({
+            step: step.step_number || 0,
+            description: step.description,
+          })),
+      };
+
+      this.recipe.set(mappedRecipe);
+      this.servings.set(mappedRecipe.servings);
+    } catch (err) {
+      console.error('Error loading recipe:', err);
+      this.error.set('Er ging iets mis bij het laden van het recept.');
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  totalTime = computed(() => {
+    const r = this.recipe();
+    return r ? r.prepTime + r.cookTime : 0;
   });
 
-  totalTime = computed(
-    () => this.recipe().prepTime + this.recipe().cookTime
-  );
-
   adjustedIngredients = computed(() => {
-    const ratio = this.servings() / this.recipe().servings;
-    return this.recipe().ingredients.map((ing) => ({
+    const r = this.recipe();
+    if (!r) return [];
+    const ratio = this.servings() / r.servings;
+    return r.ingredients.map((ing) => ({
       ...ing,
       amount: Math.round(ing.amount * ratio * 10) / 10,
     }));

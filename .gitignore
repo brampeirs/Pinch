@@ -41,3 +41,8 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Environment files (contain secrets)
+src/environments/environment.ts
+src/environments/environment.production.ts
+!src/environments/environment.example.ts

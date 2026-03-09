@@ -59,31 +59,50 @@
           <p class="mt-2 text-slate-500">Vers uit de keuken</p>
         </div>
         <a
-          routerLink="/recipes"
-          class="group flex items-center gap-1 text-sm font-semibold text-indigo-600 transition-colors hover:text-indigo-700"
+          routerLink="/recipes/new"
+          class="group flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-indigo-700 hover:shadow-lg"
         >
-          Bekijk alles
-          <svg
-            class="h-4 w-4 transition-transform group-hover:translate-x-0.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
               stroke-width="2"
-              d="M9 5l7 7-7 7"
+              d="M12 4v16m8-8H4"
             />
           </svg>
+          Recept toevoegen
         </a>
       </div>
 
+      @if (loading()) {
       <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        @for (recipe of recipes; track recipe.id) {
-        <app-recipe-card [recipe]="recipe" />
+        @for (i of [1, 2, 3, 4]; track i) {
+        <div class="animate-pulse rounded-2xl bg-slate-100 p-4">
+          <div class="mb-4 h-40 rounded-xl bg-slate-200"></div>
+          <div class="mb-2 h-4 w-3/4 rounded bg-slate-200"></div>
+          <div class="h-3 w-1/2 rounded bg-slate-200"></div>
+        </div>
         }
       </div>
+      } @else if (error()) {
+      <div class="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
+        <p class="text-red-600">{{ error() }}</p>
+        <button
+          (click)="ngOnInit()"
+          class="mt-4 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+        >
+          Opnieuw proberen
+        </button>
+      </div>
+      } @else {
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        @for (recipe of recipes(); track recipe.id) {
+        <app-recipe-card [recipe]="recipe" />
+        } @empty {
+        <p class="col-span-full text-center text-slate-500">Geen recepten gevonden.</p>
+        }
+      </div>
+      }
     </div>
   </section>
 
@@ -96,7 +115,7 @@
       </div>
 
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        @for (category of categories; track category.name) {
+        @for (category of categories(); track category.name) {
         <a
           [routerLink]="['/categories', category.slug]"
           class="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/60 transition-all hover:-translate-y-1 hover:shadow-lg hover:ring-slate-300"

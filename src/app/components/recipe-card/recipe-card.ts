@@ -1,6 +1,17 @@
 import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { Tables } from '../../models/database.types';
 
+// Database types using generated types
+type DbRecipe = Tables<'recipes'>;
+type DbCategory = Tables<'categories'>;
+
+// Extended recipe with joined category
+export interface RecipeWithCategory extends DbRecipe {
+  category: DbCategory | null;
+}
+
+// UI-friendly recipe interface (mapped from database)
 export interface Recipe {
   id: string;
   title: string;
@@ -9,6 +20,19 @@ export interface Recipe {
   category: string;
   prepTime: number;
   cookTime: number;
+}
+
+// Helper to map database recipe to UI recipe
+export function mapRecipeToUI(recipe: RecipeWithCategory): Recipe {
+  return {
+    id: recipe.id,
+    title: recipe.title,
+    description: recipe.description || '',
+    imageUrl: recipe.image_url || '',
+    category: recipe.category?.name || '',
+    prepTime: recipe.prep_time || 0,
+    cookTime: recipe.cook_time || 0,
+  };
 }
 
 @Component({

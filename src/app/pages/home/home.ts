@@ -1,6 +1,16 @@
-import { Component } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Recipe, RecipeCard } from '../../components/recipe-card/recipe-card';
+import {
+  Recipe,
+  RecipeCard,
+  RecipeWithCategory,
+  mapRecipeToUI,
+} from '../../components/recipe-card/recipe-card';
+import { SupabaseService } from '../../services/supabase.service';
+import { Tables } from '../../models/database.types';
+
+// Use generated type for categories
+type Category = Tables<'categories'>;
 
 @Component({
   selector: 'app-home',
@@ -8,52 +18,41 @@ import { Recipe, RecipeCard } from '../../components/recipe-card/recipe-card';
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })
-export class Home {
-  recipes: Recipe[] = [
-    {
-      id: '1',
-      title: 'Pasta Carbonara',
-      description: 'Romige Italiaanse pasta met spek, ei en Parmezaanse kaas',
-      imageUrl: 'https://images.unsplash.com/photo-1612874742237-6526221588e3?w=800',
-      category: 'Pasta',
-      prepTime: 10,
-      cookTime: 20,
-    },
-    {
-      id: '2',
-      title: 'Kip Teriyaki Bowl',
-      description: 'Malse kip in zoete teriyakisaus met rijst en groenten',
-      imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800',
-      category: 'Bowls',
-      prepTime: 15,
-      cookTime: 25,
-    },
-    {
-      id: '3',
-      title: 'Avocado Toast',
-      description: 'Krokant brood met romige avocado en een gepocheerd ei',
-      imageUrl: 'https://images.unsplash.com/photo-1541519227354-08fa5d50c44d?w=800',
-      category: 'Ontbijt',
-      prepTime: 5,
-      cookTime: 10,
-    },
-    {
-      id: '4',
-      title: 'Tom Kha Gai',
-      description: 'Thaise kokossoep met kip, galanga en citroengras',
-      imageUrl: 'https://images.unsplash.com/photo-1569562211093-4ed0d0758f12?w=800',
-      category: 'Soepen',
-      prepTime: 15,
-      cookTime: 30,
-    },
-  ];
+export class Home implements OnInit {
+  private supabase = inject(SupabaseService);
 
-  categories = [
-    { name: 'Pasta', slug: 'pasta', emoji: '🍝' },
-    { name: 'Soepen', slug: 'soepen', emoji: '🍲' },
-    { name: 'Salades', slug: 'salades', emoji: '🥗' },
-    { name: 'Bowls', slug: 'bowls', emoji: '🍜' },
-    { name: 'Desserts', slug: 'desserts', emoji: '🍰' },
-    { name: 'Ontbijt', slug: 'ontbijt', emoji: '🍳' },
-  ];
+  recipes = signal<Recipe[]>([]);
+  categories = signal<Category[]>([]);
+  loading = signal(true);
+  error = signal<string | null>(null);
+
+  async ngOnInit() {
+    await this.loadData();
+  }
+
+  private async loadData() {
+    this.loading.set(true);
+    this.error.set(null);
+
+    try {
+      // Load recipes and categories in parallel
+      const [recipesResult, categoriesResult] = await Promise.all([
+        this.supabase.getRecipes(),
+        this.supabase.getCategories(),
+      ]);
+
+      if (recipesResult.error) throw recipesResult.error;
+      if (categoriesResult.error) throw categoriesResult.error;
+
+      // Map database recipes to UI format
+      const mappedRecipes = (recipesResult.data as RecipeWithCategory[]).map(mapRecipeToUI);
+      this.recipes.set(mappedRecipes);
+      this.categories.set(categoriesResult.data || []);
+    } catch (err) {
+      console.error('Error loading data:', err);
+      this.error.set('Er ging iets mis bij het laden van de recepten.');
+    } finally {
+      this.loading.set(false);
+    }
+  }
 }
