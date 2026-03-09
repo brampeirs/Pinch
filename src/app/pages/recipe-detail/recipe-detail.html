@@ -1,0 +1,128 @@
+<main class="min-h-screen bg-white">
+  <!-- Hero Section -->
+  <section class="relative h-[50vh] min-h-[400px] overflow-hidden bg-slate-900">
+    <img
+      [src]="recipe().imageUrl"
+      [alt]="recipe().title"
+      class="absolute inset-0 h-full w-full object-cover opacity-60"
+    />
+    <div
+      class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-transparent"
+    ></div>
+    <div class="absolute bottom-0 left-0 right-0 p-8">
+      <div class="mx-auto max-w-4xl">
+        <div class="mb-4 flex items-center gap-3">
+          <span
+            class="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-sm font-medium text-white backdrop-blur-sm"
+          >
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <circle cx="12" cy="12" r="10" stroke-width="1.5" />
+              <polyline points="12 6 12 12 16 14" stroke-width="1.5" />
+            </svg>
+            {{ totalTime() }} min
+          </span>
+          <span
+            class="inline-flex rounded-full bg-indigo-500/90 px-3 py-1 text-sm font-medium text-white backdrop-blur-sm"
+          >
+            {{ recipe().category }}
+          </span>
+        </div>
+        <h1 class="text-4xl font-bold text-white sm:text-5xl lg:text-6xl">
+          {{ recipe().title }}
+        </h1>
+      </div>
+    </div>
+  </section>
+
+  <!-- Content -->
+  <div class="mx-auto max-w-4xl px-6 py-12">
+    <div class="grid gap-12 lg:grid-cols-3">
+      <!-- Ingredients Sidebar -->
+      <aside class="lg:col-span-1">
+        <div class="sticky top-24 rounded-2xl bg-slate-50 p-6">
+          <h2 class="mb-6 text-lg font-bold text-slate-900">Ingrediënten</h2>
+
+          <ul class="mb-6 space-y-3">
+            @for (ingredient of adjustedIngredients(); track ingredient.name) {
+            <li
+              class="flex items-center justify-between border-b border-slate-200 pb-3 last:border-0"
+            >
+              <span class="text-slate-700">{{ ingredient.name }}</span>
+              <span class="text-sm font-medium text-slate-900">
+                {{ ingredient.amount }} {{ ingredient.unit }}
+              </span>
+            </li>
+            }
+          </ul>
+
+          <!-- Servings control -->
+          <div
+            class="flex items-center justify-between rounded-xl bg-white p-3 ring-1 ring-slate-200"
+          >
+            <button
+              (click)="decreaseServings()"
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 font-bold text-slate-600 transition-colors hover:bg-slate-200"
+            >
+              −
+            </button>
+            <span class="text-sm font-medium text-slate-700">
+              <span class="font-bold text-slate-900">{{ servings() }}</span> personen
+            </span>
+            <button
+              (click)="increaseServings()"
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 font-bold text-slate-600 transition-colors hover:bg-slate-200"
+            >
+              +
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Steps -->
+      <article class="lg:col-span-2">
+        <div class="mb-8 rounded-2xl border border-slate-200 bg-slate-50/50 p-6">
+          <p class="text-lg leading-relaxed text-slate-600">
+            {{ recipe().description }}
+          </p>
+        </div>
+
+        <h2 class="mb-6 text-lg font-bold text-slate-900">Bereidingswijze</h2>
+
+        <ol class="space-y-6">
+          @for (step of recipe().steps; track step.step) {
+          <li class="flex gap-4">
+            <span
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white"
+            >
+              {{ step.step }}
+            </span>
+            <p class="pt-1 leading-relaxed text-slate-700">
+              {{ step.description }}
+            </p>
+          </li>
+          }
+        </ol>
+      </article>
+    </div>
+  </div>
+
+  <!-- Back link -->
+  <div class="border-t border-slate-100 py-8">
+    <div class="mx-auto max-w-4xl px-6">
+      <a
+        routerLink="/"
+        class="inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-slate-900"
+      >
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
+        Terug naar recepten
+      </a>
+    </div>
+  </div>
+</main>

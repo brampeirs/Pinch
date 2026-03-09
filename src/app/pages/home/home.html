@@ -1,43 +1,126 @@
-<main class="home">
-  <!-- Hero Section -->
-  <section class="hero">
-    <div class="container hero__container">
-      <h1 class="hero__title">Alleen maar<br />lekkere recepten</h1>
-      <p class="hero__subtitle">Ontdek eenvoudige en heerlijke gerechten voor elke dag</p>
-      <div class="hero__search">
-        <input type="text" placeholder="Zoek naar recepten..." />
-        <button class="btn btn--primary">Zoeken</button>
+<main class="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+  <!-- Hero Section - Vercel/Linear inspired -->
+  <section class="relative overflow-hidden pt-20 pb-32">
+    <!-- Gradient orbs background -->
+    <div class="absolute inset-0 overflow-hidden">
+      <div
+        class="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-indigo-200 opacity-50 blur-3xl"
+      ></div>
+      <div
+        class="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-purple-200 opacity-50 blur-3xl"
+      ></div>
+    </div>
+
+    <div class="relative mx-auto max-w-5xl px-6 text-center">
+      <div
+        class="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 py-1.5 text-sm font-medium text-slate-600 backdrop-blur-sm"
+      >
+        <span class="flex h-2 w-2 rounded-full bg-green-500"></span>
+        100+ recepten beschikbaar
+      </div>
+
+      <h1
+        class="mb-6 text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl lg:text-7xl"
+      >
+        Koken wordt
+        <span class="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"
+          >moeiteloos</span
+        >
+      </h1>
+
+      <p class="mx-auto mb-10 max-w-2xl text-lg text-slate-600 sm:text-xl">
+        Ontdek recepten die je daadwerkelijk gaat maken. Simpel, lekker, en zonder gedoe.
+      </p>
+
+      <!-- Search bar - Glass effect -->
+      <div
+        class="mx-auto flex max-w-xl items-center gap-3 rounded-2xl border border-slate-200/60 bg-white/70 p-2 shadow-xl shadow-slate-200/50 backdrop-blur-md"
+      >
+        <input
+          type="text"
+          placeholder="Zoek recepten, ingrediënten..."
+          class="flex-1 bg-transparent px-4 py-3 text-slate-900 placeholder-slate-400 outline-none"
+        />
+        <button
+          class="rounded-xl bg-slate-900 px-6 py-3 font-semibold text-white transition-all hover:bg-slate-800 hover:shadow-lg"
+        >
+          Zoeken
+        </button>
       </div>
     </div>
   </section>
 
-  <!-- Latest Recipes -->
-  <section class="section">
-    <div class="container">
-      <div class="section__header">
-        <h2>Nieuwste recepten</h2>
-        <a routerLink="/recipes" class="section__link">Bekijk alles →</a>
+  <!-- Latest Recipes - Card grid -->
+  <section class="py-20">
+    <div class="mx-auto max-w-6xl px-6">
+      <div class="mb-10 flex items-end justify-between">
+        <div>
+          <h2 class="text-3xl font-bold tracking-tight text-slate-900">Nieuwste recepten</h2>
+          <p class="mt-2 text-slate-500">Vers uit de keuken</p>
+        </div>
+        <a
+          routerLink="/recipes"
+          class="group flex items-center gap-1 text-sm font-semibold text-indigo-600 transition-colors hover:text-indigo-700"
+        >
+          Bekijk alles
+          <svg
+            class="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </a>
       </div>
-      <div class="recipe-grid">
+
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         @for (recipe of recipes; track recipe.id) {
-          <app-recipe-card [recipe]="recipe" />
+        <app-recipe-card [recipe]="recipe" />
         }
       </div>
     </div>
   </section>
 
-  <!-- Categories -->
-  <section class="section section--alt">
-    <div class="container">
-      <div class="section__header">
-        <h2>Categorieën</h2>
+  <!-- Categories - Bento style -->
+  <section class="bg-slate-50/50 py-20">
+    <div class="mx-auto max-w-6xl px-6">
+      <div class="mb-10 text-center">
+        <h2 class="text-3xl font-bold tracking-tight text-slate-900">Verken categorieën</h2>
+        <p class="mt-2 text-slate-500">Vind inspiratie per categorie</p>
       </div>
-      <div class="categories">
+
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         @for (category of categories; track category.name) {
-          <a [routerLink]="['/categories', category.slug]" class="category-card">
-            <span class="category-card__emoji">{{ category.emoji }}</span>
-            <span class="category-card__name">{{ category.name }}</span>
-          </a>
+        <a
+          [routerLink]="['/categories', category.slug]"
+          class="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/60 transition-all hover:-translate-y-1 hover:shadow-lg hover:ring-slate-300"
+        >
+          <div
+            class="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 to-slate-50 text-3xl transition-transform group-hover:scale-110"
+          >
+            {{ category.emoji }}
+          </div>
+          <h3 class="text-lg font-semibold text-slate-900">{{ category.name }}</h3>
+          <p class="mt-1 text-sm text-slate-500">12 recepten</p>
+          <div
+            class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 transition-all group-hover:translate-x-1 group-hover:text-slate-400"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </div>
+        </a>
         }
       </div>
     </div>
