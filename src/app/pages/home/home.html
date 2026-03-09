@@ -53,25 +53,9 @@
   <!-- Latest Recipes - Card grid -->
   <section class="py-20">
     <div class="mx-auto max-w-6xl px-6">
-      <div class="mb-10 flex items-end justify-between">
-        <div>
-          <h2 class="text-3xl font-bold tracking-tight text-slate-900">Nieuwste recepten</h2>
-          <p class="mt-2 text-slate-500">Vers uit de keuken</p>
-        </div>
-        <a
-          routerLink="/recipes/new"
-          class="group flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-indigo-700 hover:shadow-lg"
-        >
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-          Recept toevoegen
-        </a>
+      <div class="mb-10">
+        <h2 class="text-3xl font-bold tracking-tight text-slate-900">Nieuwste recepten</h2>
+        <p class="mt-2 text-slate-500">Vers uit de keuken</p>
       </div>
 
       @if (loading()) {
