@@ -40,19 +40,19 @@ function buildCanonicalText(recipe: Recipe): string {
   const parts: string[] = [];
 
   // Title
-  parts.push(`Titel: ${recipe.title}`);
+  parts.push(`Title: ${recipe.title}`);
 
   // Category
   if (recipe.category?.name) {
-    parts.push(`Categorie: ${recipe.category.name}`);
+    parts.push(`Category: ${recipe.category.name}`);
   }
 
   // Description
   if (recipe.description) {
-    parts.push(`Beschrijving: ${recipe.description}`);
+    parts.push(`Description: ${recipe.description}`);
   }
 
-  // Ingredients
+  // Ingredients - add semantic hints for better search
   if (recipe.ingredients.length > 0) {
     const sortedIngredients = [...recipe.ingredients].sort((a, b) => a.sort_order - b.sort_order);
     const ingredientLines = sortedIngredients.map((ing) => {
@@ -61,14 +61,14 @@ function buildCanonicalText(recipe: Recipe): string {
       const prefix = amount || unit ? `${amount}${unit ? ' ' + unit : ''} ` : '';
       return `- ${prefix}${ing.name}`;
     });
-    parts.push(`\nIngrediënten:\n${ingredientLines.join('\n')}`);
+    parts.push(`\nIngredients:\n${ingredientLines.join('\n')}`);
   }
 
   // Steps
   if (recipe.recipe_steps.length > 0) {
     const sortedSteps = [...recipe.recipe_steps].sort((a, b) => a.step_number - b.step_number);
     const stepLines = sortedSteps.map((step) => `${step.step_number}. ${step.description}`);
-    parts.push(`\nBereiding:\n${stepLines.join('\n')}`);
+    parts.push(`\nPreparation:\n${stepLines.join('\n')}`);
   }
 
   return parts.join('\n');

@@ -88,7 +88,7 @@ Deno.serve(async (req: Request) => {
       query,
       messages = [],
       match_count = 5,
-      match_threshold = 0.45,
+      match_threshold = 0.25,
     }: SearchRequest = await req.json();
 
     // Support both old (query) and new (messages) format for backwards compatibility
