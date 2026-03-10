@@ -102,14 +102,16 @@ Deno.serve(async (req: Request) => {
     // Fetch recipe with all details
     const { data: recipe, error: fetchError } = await supabase
       .from('recipes')
-      .select(`
+      .select(
+        `
         id,
         title,
         description,
         category:categories(name),
         ingredients(*),
         recipe_steps(*)
-      `)
+      `
+      )
       .eq('id', recipe_id)
       .single();
 
@@ -130,34 +132,34 @@ Deno.serve(async (req: Request) => {
     const tokens = embeddingResponse.usage.total_tokens;
 
     // Upsert into recipe_embeddings
-    const { error: upsertError } = await supabase
-      .from('recipe_embeddings')
-      .upsert(
-        {
-          recipe_id,
-          content,
-          embedding: JSON.stringify(embedding),
-          model: 'text-embedding-3-small',
-          tokens,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'recipe_id' }
-      );
+    // Note: pgvector expects the embedding as a string in format "[0.1,0.2,...]"
+    const embeddingString = `[${embedding.join(',')}]`;
+
+    const { error: upsertError } = await supabase.from('recipe_embeddings').upsert(
+      {
+        recipe_id,
+        content,
+        embedding: embeddingString,
+        model: 'text-embedding-3-small',
+        tokens,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'recipe_id' }
+    );
 
     if (upsertError) {
       throw new Error(`Failed to save embedding: ${upsertError.message}`);
     }
 
-    return new Response(
-      JSON.stringify({ success: true, recipe_id, tokens }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ success: true, recipe_id, tokens }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(
-      JSON.stringify({ error: message }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: message }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });
-

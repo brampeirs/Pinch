@@ -342,6 +342,35 @@ export class SupabaseService {
     }
   }
 
+  // ============ SEMANTIC SEARCH ============
+  async searchRecipes(
+    messages: { role: 'user' | 'assistant'; content: string }[],
+    matchCount: number = 5
+  ): Promise<{
+    success: boolean;
+    intent?: 'search_recipes' | 'answer_question' | 'greeting' | 'unclear';
+    message?: string;
+    results: {
+      id: string;
+      title: string;
+      description: string | null;
+      image_url: string | null;
+      category_name: string | null;
+      similarity: number;
+    }[];
+    error?: string;
+  }> {
+    const { data, error } = await this.supabase.functions.invoke('search-recipes', {
+      body: { messages, match_count: matchCount },
+    });
+
+    if (error) {
+      return { success: false, results: [], error: error.message };
+    }
+
+    return data;
+  }
+
   // ============ AI PARSING (STREAMING) ============
   async *parseRecipeTextStream(
     text: string,

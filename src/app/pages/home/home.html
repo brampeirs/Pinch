@@ -16,20 +16,20 @@
         class="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 py-1.5 text-sm font-medium text-slate-600 backdrop-blur-sm"
       >
         <span class="flex h-2 w-2 rounded-full bg-green-500"></span>
-        100+ recepten beschikbaar
+        100+ recipes available
       </div>
 
       <h1
         class="mb-6 text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl lg:text-7xl"
       >
-        Koken wordt
+        Cooking made
         <span class="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"
-          >moeiteloos</span
+          >effortless</span
         >
       </h1>
 
       <p class="mx-auto mb-10 max-w-2xl text-lg text-slate-600 sm:text-xl">
-        Ontdek recepten die je daadwerkelijk gaat maken. Simpel, lekker, en zonder gedoe.
+        Discover recipes you'll actually make.
       </p>
 
       <!-- Search bar - Glass effect -->
@@ -38,13 +38,13 @@
       >
         <input
           type="text"
-          placeholder="Zoek recepten, ingrediënten..."
+          placeholder="Search recipes, ingredients..."
           class="flex-1 bg-transparent px-4 py-3 text-slate-900 placeholder-slate-400 outline-none"
         />
         <button
           class="rounded-xl bg-slate-900 px-6 py-3 font-semibold text-white transition-all hover:bg-slate-800 hover:shadow-lg"
         >
-          Zoeken
+          Search
         </button>
       </div>
     </div>
@@ -54,8 +54,8 @@
   <section class="py-20">
     <div class="mx-auto max-w-6xl px-6">
       <div class="mb-10">
-        <h2 class="text-3xl font-bold tracking-tight text-slate-900">Nieuwste recepten</h2>
-        <p class="mt-2 text-slate-500">Vers uit de keuken</p>
+        <h2 class="text-3xl font-bold tracking-tight text-slate-900">Latest recipes</h2>
+        <p class="mt-2 text-slate-500">Fresh from the kitchen</p>
       </div>
 
       @if (loading()) {
@@ -75,7 +75,7 @@
           (click)="ngOnInit()"
           class="mt-4 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
         >
-          Opnieuw proberen
+          Try again
         </button>
       </div>
       } @else {
@@ -83,7 +83,7 @@
         @for (recipe of recipes(); track recipe.id) {
         <app-recipe-card [recipe]="recipe" />
         } @empty {
-        <p class="col-span-full text-center text-slate-500">Geen recepten gevonden.</p>
+        <p class="col-span-full text-center text-slate-500">No recipes found.</p>
         }
       </div>
       }
@@ -94,8 +94,8 @@
   <section class="bg-slate-50/50 py-20">
     <div class="mx-auto max-w-6xl px-6">
       <div class="mb-10 text-center">
-        <h2 class="text-3xl font-bold tracking-tight text-slate-900">Verken categorieën</h2>
-        <p class="mt-2 text-slate-500">Vind inspiratie per categorie</p>
+        <h2 class="text-3xl font-bold tracking-tight text-slate-900">Explore categories</h2>
+        <p class="mt-2 text-slate-500">Find inspiration by category</p>
       </div>
 
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -110,7 +110,7 @@
             {{ category.emoji }}
           </div>
           <h3 class="text-lg font-semibold text-slate-900">{{ category.name }}</h3>
-          <p class="mt-1 text-sm text-slate-500">12 recepten</p>
+          <p class="mt-1 text-sm text-slate-500">12 recipes</p>
           <div
             class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 transition-all group-hover:translate-x-1 group-hover:text-slate-400"
           >
