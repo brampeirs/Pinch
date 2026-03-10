@@ -1,7 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { SupabaseService } from '../../services/supabase.service';
 
 interface IngredientForm {
@@ -20,9 +20,15 @@ interface StepForm {
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './add-recipe.html',
 })
-export class AddRecipePage {
+export class AddRecipePage implements OnInit {
   private supabase = inject(SupabaseService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
+
+  // Edit mode
+  isEditMode = signal(false);
+  recipeId = signal<string | null>(null);
+  loading = signal(false);
 
   // Form state
   title = signal('');
@@ -55,8 +61,67 @@ export class AddRecipePage {
   parsingIngredients = signal(false);
   parsingSteps = signal(false);
 
-  constructor() {
+  ngOnInit() {
     this.loadCategories();
+
+    // Check if we're in edit mode
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      this.isEditMode.set(true);
+      this.recipeId.set(id);
+      this.loadRecipe(id);
+    }
+  }
+
+  async loadRecipe(id: string) {
+    this.loading.set(true);
+    this.error.set(null);
+
+    const { data, error } = await this.supabase.getRecipeById(id);
+
+    if (error || !data) {
+      this.error.set('Recept niet gevonden');
+      this.loading.set(false);
+      return;
+    }
+
+    // Populate form with existing data
+    this.title.set(data.title);
+    this.description.set(data.description || '');
+    this.categoryId.set(data.category_id || '');
+    this.imageUrl.set(data.image_url || '');
+    this.prepTime.set(data.prep_time || null);
+    this.cookTime.set(data.cook_time || null);
+    this.servings.set(data.servings || 4);
+
+    // Set image preview if there's an existing image
+    if (data.image_url) {
+      this.imagePreview.set(data.image_url);
+    }
+
+    // Load ingredients
+    if (data.ingredients && data.ingredients.length > 0) {
+      const sortedIngredients = [...data.ingredients].sort(
+        (a, b) => (a.sort_order || 0) - (b.sort_order || 0)
+      );
+      this.ingredients.set(
+        sortedIngredients.map((ing) => ({
+          name: ing.name,
+          amount: ing.amount ? Number(ing.amount) : null,
+          unit: ing.unit || '',
+        }))
+      );
+    }
+
+    // Load steps
+    if (data.recipe_steps && data.recipe_steps.length > 0) {
+      const sortedSteps = [...data.recipe_steps].sort(
+        (a, b) => (a.step_number || 0) - (b.step_number || 0)
+      );
+      this.steps.set(sortedSteps.map((step) => ({ description: step.description })));
+    }
+
+    this.loading.set(false);
   }
 
   async loadCategories() {
@@ -258,28 +323,33 @@ export class AddRecipePage {
       finalImageUrl = url || '';
     }
 
-    const { data, error } = await this.supabase.createRecipe(
-      {
-        title: this.title(),
-        description: this.description() || undefined,
-        category_id: this.categoryId() || undefined,
-        image_url: finalImageUrl || undefined,
-        prep_time: this.prepTime() ?? undefined,
-        cook_time: this.cookTime() ?? undefined,
-        servings: this.servings() ?? undefined,
-        is_published: true,
-      },
-      validIngredients.map((i, idx) => ({
-        name: i.name,
-        amount: i.amount ?? undefined,
-        unit: i.unit || undefined,
-        sort_order: idx,
-      })),
-      validSteps.map((s, idx) => ({
-        step_number: idx + 1,
-        description: s.description,
-      }))
-    );
+    const recipeData = {
+      title: this.title(),
+      description: this.description() || undefined,
+      category_id: this.categoryId() || undefined,
+      image_url: finalImageUrl || undefined,
+      prep_time: this.prepTime() ?? undefined,
+      cook_time: this.cookTime() ?? undefined,
+      servings: this.servings() ?? undefined,
+      is_published: true,
+    };
+
+    const ingredientsData = validIngredients.map((i, idx) => ({
+      name: i.name,
+      amount: i.amount ?? undefined,
+      unit: i.unit || undefined,
+      sort_order: idx,
+    }));
+
+    const stepsData = validSteps.map((s, idx) => ({
+      step_number: idx + 1,
+      description: s.description,
+    }));
+
+    // Call create or update based on mode
+    const { data, error } = this.isEditMode()
+      ? await this.supabase.updateRecipe(this.recipeId()!, recipeData, ingredientsData, stepsData)
+      : await this.supabase.createRecipe(recipeData, ingredientsData, stepsData);
 
     this.saving.set(false);
 

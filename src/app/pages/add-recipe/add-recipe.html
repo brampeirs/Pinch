@@ -16,8 +16,12 @@
         </svg>
         Terug
       </a>
-      <h1 class="text-3xl font-bold text-slate-900">Nieuw recept</h1>
-      <p class="mt-2 text-slate-600">Deel jouw favoriete recept met de wereld</p>
+      <h1 class="text-3xl font-bold text-slate-900">
+        @if (isEditMode()) { Recept bewerken } @else { Nieuw recept }
+      </h1>
+      <p class="mt-2 text-slate-600">
+        @if (isEditMode()) { Pas je recept aan } @else { Deel jouw favoriete recept met de wereld }
+      </p>
     </div>
 
     <!-- Error message -->
@@ -421,7 +425,7 @@
             </svg>
             Opslaan...
           </span>
-          } @else { Recept opslaan }
+          } @else if (isEditMode()) { Wijzigingen opslaan } @else { Recept opslaan }
         </button>
       </div>
     </form>

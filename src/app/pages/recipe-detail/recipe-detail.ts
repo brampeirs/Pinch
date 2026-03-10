@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SupabaseService } from '../../services/supabase.service';
 import { Tables } from '../../models/database.types';
 
@@ -49,12 +49,15 @@ interface RecipeDetail {
 })
 export class RecipeDetailPage implements OnInit {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private supabase = inject(SupabaseService);
 
   servings = signal(2);
   recipe = signal<RecipeDetail | null>(null);
   loading = signal(true);
   error = signal<string | null>(null);
+  deleting = signal(false);
+  showDeleteConfirm = signal(false);
 
   async ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
@@ -136,5 +139,37 @@ export class RecipeDetailPage implements OnInit {
 
   increaseServings() {
     this.servings.update((v) => v + 1);
+  }
+
+  editRecipe() {
+    const r = this.recipe();
+    if (r) {
+      this.router.navigate(['/recipes', r.id, 'edit']);
+    }
+  }
+
+  confirmDelete() {
+    this.showDeleteConfirm.set(true);
+  }
+
+  cancelDelete() {
+    this.showDeleteConfirm.set(false);
+  }
+
+  async deleteRecipe() {
+    const r = this.recipe();
+    if (!r) return;
+
+    this.deleting.set(true);
+    const { error } = await this.supabase.deleteRecipe(r.id);
+
+    if (error) {
+      this.error.set('Verwijderen mislukt: ' + error.message);
+      this.deleting.set(false);
+      this.showDeleteConfirm.set(false);
+      return;
+    }
+
+    this.router.navigate(['/']);
   }
 }

@@ -213,6 +213,124 @@ export class SupabaseService {
     return { data: recipeData, error: null };
   }
 
+  // ============ UPDATE RECIPE ============
+  async updateRecipe(
+    recipeId: string,
+    recipe: {
+      title: string;
+      description?: string;
+      category_id?: string;
+      image_url?: string;
+      prep_time?: number;
+      cook_time?: number;
+      servings?: number;
+      is_published?: boolean;
+    },
+    ingredients: { name: string; amount?: number; unit?: string; sort_order?: number }[],
+    steps: { step_number: number; description: string }[]
+  ) {
+    // Update the recipe
+    const { data: recipeData, error: recipeError } = await this.supabase
+      .from('recipes')
+      .update({
+        title: recipe.title,
+        description: recipe.description,
+        category_id: recipe.category_id,
+        image_url: recipe.image_url,
+        prep_time: recipe.prep_time,
+        cook_time: recipe.cook_time,
+        servings: recipe.servings,
+        is_published: recipe.is_published ?? true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', recipeId)
+      .select()
+      .single();
+
+    if (recipeError || !recipeData) {
+      return { data: null, error: recipeError };
+    }
+
+    // Delete existing ingredients and insert new ones
+    await this.supabase.from('ingredients').delete().eq('recipe_id', recipeId);
+
+    if (ingredients.length > 0) {
+      const ingredientsToInsert = ingredients.map((ing, index) => ({
+        recipe_id: recipeId,
+        name: ing.name,
+        amount: ing.amount,
+        unit: ing.unit,
+        sort_order: ing.sort_order ?? index,
+      }));
+
+      const { error: ingredientsError } = await this.supabase
+        .from('ingredients')
+        .insert(ingredientsToInsert);
+
+      if (ingredientsError) {
+        return { data: null, error: ingredientsError };
+      }
+    }
+
+    // Delete existing steps and insert new ones
+    await this.supabase.from('recipe_steps').delete().eq('recipe_id', recipeId);
+
+    if (steps.length > 0) {
+      const stepsToInsert = steps.map((step) => ({
+        recipe_id: recipeId,
+        step_number: step.step_number,
+        description: step.description,
+      }));
+
+      const { error: stepsError } = await this.supabase.from('recipe_steps').insert(stepsToInsert);
+
+      if (stepsError) {
+        return { data: null, error: stepsError };
+      }
+    }
+
+    // Re-generate embedding (fire and forget)
+    this.embedRecipe(recipeId).catch((err) => {
+      console.warn('Failed to embed recipe:', err);
+    });
+
+    return { data: recipeData, error: null };
+  }
+
+  // ============ DELETE RECIPE ============
+  async deleteRecipe(recipeId: string): Promise<{ error: Error | null }> {
+    // First, get the recipe to check for image_url
+    const { data: recipe, error: fetchError } = await this.supabase
+      .from('recipes')
+      .select('image_url')
+      .eq('id', recipeId)
+      .single();
+
+    if (fetchError) {
+      return { error: fetchError };
+    }
+
+    // Delete the image from storage if it exists
+    if (recipe?.image_url) {
+      const imagePath = this.extractImagePath(recipe.image_url);
+      if (imagePath) {
+        await this.supabase.storage.from('recipe-images').remove([imagePath]);
+      }
+    }
+
+    // Delete the recipe (ingredients, steps, embeddings will cascade)
+    const { error: deleteError } = await this.supabase.from('recipes').delete().eq('id', recipeId);
+
+    return { error: deleteError };
+  }
+
+  // Extract storage path from full URL
+  private extractImagePath(imageUrl: string): string | null {
+    // URL format: https://<project>.supabase.co/storage/v1/object/public/recipe-images/recipes/filename.jpg
+    const match = imageUrl.match(/recipe-images\/(.+)$/);
+    return match ? match[1] : null;
+  }
+
   // ============ EMBEDDING ============
   async embedRecipe(recipeId: string): Promise<void> {
     const { error } = await this.supabase.functions.invoke('embed-recipe', {
