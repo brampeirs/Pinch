@@ -50,7 +50,7 @@ export class Home implements OnInit {
       this.categories.set(categoriesResult.data || []);
     } catch (err) {
       console.error('Error loading data:', err);
-      this.error.set('Er ging iets mis bij het laden van de recepten.');
+      this.error.set('Something went wrong while loading recipes.');
     } finally {
       this.loading.set(false);
     }
