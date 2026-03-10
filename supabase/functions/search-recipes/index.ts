@@ -150,6 +150,22 @@ Deno.serve(async (req: Request) => {
 
     const analysis = JSON.parse(analysisResponse.choices[0]?.message?.content || '{}');
 
+    // Log the LLM analysis
+    console.log(
+      '📝 Search Request:',
+      JSON.stringify(
+        {
+          userMessage: conversationMessages[conversationMessages.length - 1]?.content,
+          intent: analysis.intent,
+          searchQuery: analysis.search_query,
+          filters: analysis.filters,
+          message: analysis.message,
+        },
+        null,
+        2
+      )
+    );
+
     // If not a recipe search, return the AI response without searching
     if (analysis.intent !== 'search_recipes' || !analysis.search_query) {
       return new Response(
@@ -184,11 +200,34 @@ Deno.serve(async (req: Request) => {
     });
 
     if (rpcError) {
+      console.error('❌ RPC Error:', rpcError.message);
       throw new Error(`RPC error: ${rpcError.message}`);
     }
 
-    // Adjust message if no results found
+    // Log search results
     const resultCount = results?.length || 0;
+    console.log(
+      '🔍 Search Results:',
+      JSON.stringify(
+        {
+          query: analysis.search_query,
+          filters: {
+            category: filters.category || null,
+            tags: filters.tags || null,
+            max_time: filters.max_time || null,
+          },
+          resultCount,
+          results: results?.map((r: { title: string; similarity: number }) => ({
+            title: r.title,
+            similarity: Math.round(r.similarity * 100) + '%',
+          })),
+        },
+        null,
+        2
+      )
+    );
+
+    // Adjust message if no results found
     let finalMessage = analysis.message;
     if (resultCount === 0) {
       finalMessage =
