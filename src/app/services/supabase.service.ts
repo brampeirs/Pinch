@@ -205,7 +205,23 @@ export class SupabaseService {
       }
     }
 
+    // Trigger embedding generation (fire and forget - don't block recipe creation)
+    this.embedRecipe(recipeData.id).catch((err) => {
+      console.warn('Failed to embed recipe:', err);
+    });
+
     return { data: recipeData, error: null };
+  }
+
+  // ============ EMBEDDING ============
+  async embedRecipe(recipeId: string): Promise<void> {
+    const { error } = await this.supabase.functions.invoke('embed-recipe', {
+      body: { recipe_id: recipeId },
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
   }
 
   // ============ AI PARSING (STREAMING) ============
