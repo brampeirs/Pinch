@@ -20,7 +20,7 @@ interface SearchRequest {
   match_threshold?: number;
 }
 
-// JSON Schema for Structured Outputs
+// JSON Schema for Structured Outputs with filters
 const RESPONSE_SCHEMA = {
   name: 'assistant_response',
   strict: true,
@@ -34,14 +34,39 @@ const RESPONSE_SCHEMA = {
       },
       search_query: {
         type: ['string', 'null'],
-        description: 'Optimized search terms if intent is search_recipes, otherwise null',
+        description:
+          'Optimized search terms for semantic search (ingredients, cooking style, cuisine). Should NOT include category or time constraints.',
+      },
+      filters: {
+        type: 'object',
+        properties: {
+          category: {
+            type: ['string', 'null'],
+            description:
+              'Exact category filter. Must be one of: Pasta, Soups, Salads, Main Dishes, Desserts, Breakfast. Use null if not specified.',
+          },
+          tags: {
+            type: ['array', 'null'],
+            items: { type: 'string' },
+            description:
+              'Tags to filter by (e.g., ["quick", "vegetarian", "spicy"]). Use null if not specified.',
+          },
+          max_time: {
+            type: ['integer', 'null'],
+            description:
+              'Maximum total cooking time in minutes (prep + cook). Extract from phrases like "under 30 minutes", "quick", "fast". Use null if not specified.',
+          },
+        },
+        required: ['category', 'tags', 'max_time'],
+        additionalProperties: false,
+        description: 'Structured filters for exact matching',
       },
       message: {
         type: 'string',
         description: 'A friendly response message to show the user',
       },
     },
-    required: ['intent', 'search_query', 'message'],
+    required: ['intent', 'search_query', 'filters', 'message'],
     additionalProperties: false,
   },
 } as const;
@@ -50,24 +75,34 @@ const ASSISTANT_PROMPT = `You are a friendly cooking assistant for a recipe app 
 
 Your task is to determine what the user wants and provide an appropriate response.
 
-IMPORTANT: You can ONLY suggest recipes that exist in our database. You will search for recipes and results will be shown to the user. Do NOT make up or suggest specific recipe names - just indicate you're searching and let the results speak for themselves.
+IMPORTANT: You can ONLY suggest recipes that exist in our database. You will search for recipes and results will be shown to the user. Do NOT make up or suggest specific recipe names.
 
 INTENTS:
-- search_recipes: User is looking for recipes (e.g., "do you have pasta?", "something with chicken", "I want to make tacos")
-- answer_question: User asks a cooking question without searching for a specific recipe (e.g., "how long should I cook rice?")
-- greeting: User greets or starts a conversation (e.g., "hello", "hey")
+- search_recipes: User is looking for recipes (e.g., "do you have pasta?", "something with chicken", "desserts under 30 minutes")
+- answer_question: User asks a cooking question without searching for a specific recipe
+- greeting: User greets or starts a conversation
 - unclear: You don't understand what the user means
 
 FOR SEARCH_RECIPES:
-- Convert the query into optimized search terms in search_query
-- Remove question words, keep keywords (dish, ingredients, cuisine)
-- Example: "do you have soup?" → search_query: "soup broth"
-- Keep your message SHORT and generic: "Let me search for recipes with [ingredients]!" or "Searching for [dish] recipes..."
-- Do NOT suggest specific dishes like "Maybe a gazpacho or fresh salad?" - you don't know what's in the database!
-- Do NOT promise results - just say you're looking
+1. Extract FILTERS (exact matching):
+   - category: Must match exactly: "Pasta", "Soups", "Salads", "Main Dishes", "Desserts", "Breakfast"
+   - tags: Keywords like ["quick", "vegetarian", "spicy", "comfort food"]
+   - max_time: Convert time phrases ("under 30 minutes" → 30, "quick" → 20)
+
+2. Extract search_query (semantic search):
+   - Only include ingredients, cooking style, cuisine, flavors
+   - Do NOT include category names or time constraints in search_query
+   - Example: "quick Italian desserts" → filters: {category: "Desserts", max_time: 20}, search_query: "Italian sweet"
+
+3. Message: Keep SHORT - "Looking for quick desserts!" or "Searching for Italian dishes..."
+
+EXAMPLES:
+- "desserts under 30 minutes" → filters: {category: "Desserts", max_time: 30}, search_query: "sweet treat"
+- "something with chicken" → filters: {category: null, max_time: null}, search_query: "chicken"
+- "quick vegetarian soup" → filters: {category: "Soups", tags: ["vegetarian"], max_time: 20}, search_query: "vegetarian broth"
 
 FOR OTHER INTENTS:
-- search_query must be null
+- search_query and filters must be null
 - Provide a helpful response in message`;
 
 Deno.serve(async (req: Request) => {
@@ -137,11 +172,15 @@ Deno.serve(async (req: Request) => {
 
     const embedding = embeddingResponse.data[0].embedding;
 
-    // Step 3: Search with embedding
+    // Step 3: Search with embedding + filters
+    const filters = analysis.filters || {};
     const { data: results, error: rpcError } = await supabase.rpc('search_recipes', {
       query_embedding: embedding,
       match_count,
       match_threshold,
+      filter_category: filters.category || null,
+      filter_tags: filters.tags || null,
+      filter_max_time: filters.max_time || null,
     });
 
     if (rpcError) {
