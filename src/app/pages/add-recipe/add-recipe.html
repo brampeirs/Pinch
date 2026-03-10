@@ -14,13 +14,14 @@
             d="M15 19l-7-7 7-7"
           />
         </svg>
-        Terug
+        Back
       </a>
       <h1 class="text-3xl font-bold text-slate-900">
-        @if (isEditMode()) { Recept bewerken } @else { Nieuw recept }
+        @if (isEditMode()) { Edit recipe } @else { New recipe }
       </h1>
       <p class="mt-2 text-slate-600">
-        @if (isEditMode()) { Pas je recept aan } @else { Deel jouw favoriete recept met de wereld }
+        @if (isEditMode()) { Update your recipe } @else { Share your favorite recipe with the world
+        }
       </p>
     </div>
 
@@ -35,42 +36,42 @@
     <form (ngSubmit)="saveRecipe()" class="space-y-8">
       <!-- Basic Info -->
       <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 class="mb-4 text-lg font-semibold text-slate-900">Basis informatie</h2>
+        <h2 class="mb-4 text-lg font-semibold text-slate-900">Basic information</h2>
 
         <div class="space-y-4">
           <div>
-            <label class="mb-1 block text-sm font-medium text-slate-700">Titel *</label>
+            <label class="mb-1 block text-sm font-medium text-slate-700">Title *</label>
             <input
               type="text"
               [ngModel]="title()"
               (ngModelChange)="title.set($event)"
               name="title"
-              placeholder="Bijv. Pasta Carbonara"
+              placeholder="E.g. Pasta Carbonara"
               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
             />
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-slate-700">Beschrijving</label>
+            <label class="mb-1 block text-sm font-medium text-slate-700">Description</label>
             <textarea
               [ngModel]="description()"
               (ngModelChange)="description.set($event)"
               name="description"
               rows="3"
-              placeholder="Korte beschrijving van het gerecht..."
+              placeholder="Short description of the dish..."
               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
             ></textarea>
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-slate-700">Categorie</label>
+            <label class="mb-1 block text-sm font-medium text-slate-700">Category</label>
             <select
               [ngModel]="categoryId()"
               (ngModelChange)="categoryId.set($event)"
               name="categoryId"
               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
             >
-              <option value="">Kies een categorie</option>
+              <option value="">Choose a category</option>
               @for (cat of categories(); track cat.id) {
               <option [value]="cat.id">{{ cat.emoji }} {{ cat.name }}</option>
               }
@@ -79,7 +80,7 @@
 
           <!-- Image Upload -->
           <div>
-            <label class="mb-1 block text-sm font-medium text-slate-700">Afbeelding</label>
+            <label class="mb-1 block text-sm font-medium text-slate-700">Image</label>
             @if (imagePreview()) {
             <div class="relative">
               <img
@@ -119,10 +120,8 @@
                   d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                 />
               </svg>
-              <span class="text-sm font-medium text-slate-600"
-                >Klik om een afbeelding te uploaden</span
-              >
-              <span class="mt-1 text-xs text-slate-400">JPG, PNG, WebP of GIF (max 5MB)</span>
+              <span class="text-sm font-medium text-slate-600">Click to upload an image</span>
+              <span class="mt-1 text-xs text-slate-400">JPG, PNG, WebP or GIF (max 5MB)</span>
               <input
                 type="file"
                 (change)="onImageSelected($event)"
@@ -135,9 +134,7 @@
 
           <div class="grid grid-cols-3 gap-4">
             <div>
-              <label class="mb-1 block text-sm font-medium text-slate-700"
-                >Voorbereidingstijd (min)</label
-              >
+              <label class="mb-1 block text-sm font-medium text-slate-700">Prep time (min)</label>
               <input
                 type="number"
                 [ngModel]="prepTime()"
@@ -149,7 +146,7 @@
               />
             </div>
             <div>
-              <label class="mb-1 block text-sm font-medium text-slate-700">Kooktijd (min)</label>
+              <label class="mb-1 block text-sm font-medium text-slate-700">Cook time (min)</label>
               <input
                 type="number"
                 [ngModel]="cookTime()"
@@ -161,7 +158,7 @@
               />
             </div>
             <div>
-              <label class="mb-1 block text-sm font-medium text-slate-700">Porties</label>
+              <label class="mb-1 block text-sm font-medium text-slate-700">Servings</label>
               <input
                 type="number"
                 [ngModel]="servings()"
@@ -179,13 +176,13 @@
       <!-- Ingredients -->
       <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div class="mb-4 flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-slate-900">Ingrediënten *</h2>
+          <h2 class="text-lg font-semibold text-slate-900">Ingredients *</h2>
           <button
             type="button"
             (click)="addIngredient()"
             class="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200"
           >
-            + Toevoegen
+            + Add
           </button>
         </div>
 
@@ -205,14 +202,14 @@
                 d="M13 10V3L4 14h7v7l9-11h-7z"
               />
             </svg>
-            <span class="text-sm font-medium text-indigo-900">Plak & Parse met AI</span>
+            <span class="text-sm font-medium text-indigo-900">Paste & Parse with AI</span>
           </div>
           <textarea
             [ngModel]="rawIngredientsText()"
             (ngModelChange)="rawIngredientsText.set($event)"
             name="rawIngredients"
             rows="3"
-            placeholder="Plak ingrediënten hier...&#10;Bijv:&#10;500g pasta&#10;2 eieren&#10;100g parmezaan"
+            placeholder="Paste ingredients here...&#10;E.g:&#10;500g pasta&#10;2 eggs&#10;100g parmesan"
             class="mb-2 w-full rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
           ></textarea>
           <button
@@ -237,7 +234,7 @@
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
               ></path>
             </svg>
-            Parsen... } @else { ✨ Parse ingrediënten }
+            Parsing... } @else { ✨ Parse ingredients }
           </button>
         </div>
 
@@ -249,7 +246,7 @@
               [ngModel]="ingredient.amount"
               (ngModelChange)="updateIngredient(i, 'amount', $event)"
               [name]="'ing-amount-' + i"
-              placeholder="Aantal"
+              placeholder="Amount"
               min="0"
               step="0.1"
               class="w-20 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
@@ -259,7 +256,7 @@
               [ngModel]="ingredient.unit"
               (ngModelChange)="updateIngredient(i, 'unit', $event)"
               [name]="'ing-unit-' + i"
-              placeholder="Eenheid"
+              placeholder="Unit"
               class="w-24 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
             />
             <input
@@ -267,7 +264,7 @@
               [ngModel]="ingredient.name"
               (ngModelChange)="updateIngredient(i, 'name', $event)"
               [name]="'ing-name-' + i"
-              placeholder="Ingrediënt (bijv. pasta)"
+              placeholder="Ingredient (e.g. pasta)"
               class="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
             />
             @if (ingredients().length > 1) {
@@ -294,13 +291,13 @@
       <!-- Steps -->
       <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div class="mb-4 flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-slate-900">Bereidingsstappen *</h2>
+          <h2 class="text-lg font-semibold text-slate-900">Preparation steps *</h2>
           <button
             type="button"
             (click)="addStep()"
             class="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200"
           >
-            + Toevoegen
+            + Add
           </button>
         </div>
 
@@ -320,14 +317,14 @@
                 d="M13 10V3L4 14h7v7l9-11h-7z"
               />
             </svg>
-            <span class="text-sm font-medium text-indigo-900">Plak & Parse met AI</span>
+            <span class="text-sm font-medium text-indigo-900">Paste & Parse with AI</span>
           </div>
           <textarea
             [ngModel]="rawStepsText()"
             (ngModelChange)="rawStepsText.set($event)"
             name="rawSteps"
             rows="4"
-            placeholder="Plak bereidingsstappen hier...&#10;Bijv:&#10;Kook de pasta in gezouten water. Klop de eieren met de kaas. Meng alles samen en serveer direct."
+            placeholder="Paste preparation steps here...&#10;E.g:&#10;Cook the pasta in salted water. Beat the eggs with the cheese. Mix everything together and serve immediately."
             class="mb-2 w-full rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
           ></textarea>
           <button
@@ -352,7 +349,7 @@
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
               ></path>
             </svg>
-            Parsen... } @else { ✨ Parse stappen }
+            Parsing... } @else { ✨ Parse steps }
           </button>
         </div>
 
@@ -369,7 +366,7 @@
               (ngModelChange)="updateStep(i, $event)"
               [name]="'step-' + i"
               rows="2"
-              placeholder="Beschrijf deze stap..."
+              placeholder="Describe this step..."
               class="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
             ></textarea>
             @if (steps().length > 1) {
@@ -399,7 +396,7 @@
           routerLink="/"
           class="rounded-xl px-6 py-3 font-semibold text-slate-600 hover:text-slate-900"
         >
-          Annuleren
+          Cancel
         </a>
         <button
           type="submit"
@@ -423,9 +420,9 @@
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               ></path>
             </svg>
-            Opslaan...
+            Saving...
           </span>
-          } @else if (isEditMode()) { Wijzigingen opslaan } @else { Recept opslaan }
+          } @else if (isEditMode()) { Save changes } @else { Save recipe }
         </button>
       </div>
     </form>
