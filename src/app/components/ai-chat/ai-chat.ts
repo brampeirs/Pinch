@@ -1,41 +1,269 @@
-import { Component, signal, ElementRef, ViewChild, inject } from '@angular/core';
+import { Component, signal, ElementRef, ViewChild, effect } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { SupabaseService } from '../../services/supabase.service';
+import { Chat } from '@ai-sdk/angular';
+import { DefaultChatTransport, type UIMessage } from 'ai';
+import { MarkdownComponent } from 'ngx-markdown';
+import { environment } from '../../../environments/environment';
 
-export interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  recipes?: {
-    id: string;
-    title: string;
-    description: string | null;
-    image_url: string | null;
-    similarity: number;
-  }[];
+// Type for recipe data returned by the findRecipe tool
+export interface RecipeResult {
+  id: string;
+  title: string;
+  description: string | null;
+  imageUrl: string | null;
+  similarity: number;
+  prepTime: number | null;
+  cookTime: number | null;
+}
+
+// Track reasoning state for auto-open/close
+interface ReasoningState {
+  wasStreaming: boolean;
+  isOpen: boolean;
+  autoCloseTimer?: ReturnType<typeof setTimeout>;
 }
 
 @Component({
   selector: 'app-ai-chat',
   templateUrl: './ai-chat.html',
   styleUrl: './ai-chat.scss',
-  imports: [RouterLink],
+  imports: [RouterLink, MarkdownComponent],
 })
 export class AiChat {
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
-  private supabase = inject(SupabaseService);
+
+  // Chat instance from @ai-sdk/angular with transport configuration
+  public chat = new Chat({
+    transport: new DefaultChatTransport({
+      api: `${environment.supabase.url}/functions/v1/chat`,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }),
+    // Use 'messages' (not 'initialMessages') for initial state
+    messages: [
+      {
+        id: 'welcome',
+        role: 'assistant' as const,
+        parts: [
+          {
+            type: 'text' as const,
+            text: "Hi! 👋 I'm your cooking assistant. Tell me what you want to make or what ingredients you have, and I'll find the best recipes for you!",
+          },
+        ],
+      },
+    ],
+  });
 
   isOpen = signal(false);
-  isLoading = signal(false);
   inputMessage = signal('');
-  messages = signal<ChatMessage[]>([
-    {
-      role: 'assistant',
-      content:
-        "Hi! 👋 I'm your cooking assistant. Tell me what you want to make or what ingredients you have, and I'll find the best recipes for you!",
-      timestamp: new Date(),
-    },
-  ]);
+
+  // Track reasoning open/close state per message
+  private reasoningStates = new Map<string, ReasoningState>();
+  private previousReasoningStreaming = new Map<string, boolean>();
+
+  constructor() {
+    // Auto-scroll when messages change - we check messages length in the effect
+    effect(() => {
+      // Track messages array to trigger effect when new messages arrive
+      if (this.chat.messages.length > 0) {
+        setTimeout(() => this.scrollToBottom(), 100);
+      }
+    });
+  }
+
+  // Getters for template binding
+  get messages(): UIMessage[] {
+    // Process reasoning states for auto-open/close
+    this.chat.messages.forEach((msg) => {
+      msg.parts?.forEach((p, partIndex) => {
+        const part = p as any;
+        if (part.type === 'reasoning') {
+          const key = `${msg.id}-${partIndex}`;
+          const isStreaming = part.state === 'streaming';
+          const wasStreaming = this.previousReasoningStreaming.get(key) ?? false;
+
+          // Initialize state if not exists
+          if (!this.reasoningStates.has(key)) {
+            this.reasoningStates.set(key, {
+              wasStreaming: false,
+              isOpen: isStreaming, // Start open if streaming
+            });
+          }
+
+          const state = this.reasoningStates.get(key)!;
+
+          // Auto-open when streaming starts
+          if (isStreaming && !wasStreaming) {
+            state.isOpen = true;
+            state.wasStreaming = true;
+          }
+
+          // Auto-close 1 second after streaming ends
+          if (!isStreaming && wasStreaming && state.isOpen) {
+            // Clear any existing timer
+            if (state.autoCloseTimer) {
+              clearTimeout(state.autoCloseTimer);
+            }
+            // Set new auto-close timer
+            state.autoCloseTimer = setTimeout(() => {
+              state.isOpen = false;
+            }, 1000);
+          }
+
+          this.previousReasoningStreaming.set(key, isStreaming);
+        }
+      });
+    });
+
+    return this.chat.messages;
+  }
+
+  get isLoading(): boolean {
+    return this.chat.status === 'streaming' || this.chat.status === 'submitted';
+  }
+
+  // Check if we're waiting for an assistant response (last message is from user)
+  private get isWaitingForResponse(): boolean {
+    const messages = this.chat.messages;
+    if (messages.length === 0) return false;
+    const lastMessage = messages[messages.length - 1] as any;
+    return lastMessage.role === 'user';
+  }
+
+  // Get the last assistant message parts for loading state checks
+  // Returns empty array if we're waiting for a new response
+  private get lastAssistantMessageParts(): any[] {
+    // If the last message is from user, we're waiting for a NEW assistant response
+    // so return empty array (no parts yet for the upcoming response)
+    if (this.isWaitingForResponse) {
+      return [];
+    }
+
+    const messages = this.chat.messages;
+    // Find the last assistant message
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant') {
+        return messages[i].parts ?? [];
+      }
+    }
+    return [];
+  }
+
+  // Check if recipe search tools are currently loading
+  get isRecipeSearchLoading(): boolean {
+    return this.lastAssistantMessageParts.some(
+      (part) =>
+        (part.type === 'tool-optimizeRecipeQuery' || part.type === 'tool-findRecipe') &&
+        (part.state === 'input-streaming' || part.state === 'input-available')
+    );
+  }
+
+  // Check if optimizeRecipeQuery is currently running (not yet complete)
+  get isOptimizeQueryLoading(): boolean {
+    return this.lastAssistantMessageParts.some(
+      (part) =>
+        part.type === 'tool-optimizeRecipeQuery' &&
+        (part.state === 'input-streaming' || part.state === 'input-available')
+    );
+  }
+
+  // Check if findRecipe is currently running (not yet complete)
+  get isFindRecipeLoading(): boolean {
+    return this.lastAssistantMessageParts.some(
+      (part) =>
+        part.type === 'tool-findRecipe' &&
+        (part.state === 'input-streaming' || part.state === 'input-available')
+    );
+  }
+
+  // Check if recipe search flow has started (any tool activity)
+  get isRecipeSearchInProgress(): boolean {
+    return this.lastAssistantMessageParts.some(
+      (part) => part.type === 'tool-optimizeRecipeQuery' || part.type === 'tool-findRecipe'
+    );
+  }
+
+  // Check if we have recipe search output
+  get hasRecipeSearchOutput(): boolean {
+    return this.lastAssistantMessageParts.some(
+      (part) => part.type === 'tool-findRecipe' && part.state === 'output-available'
+    );
+  }
+
+  // Check if reasoning is currently streaming
+  get isReasoningActive(): boolean {
+    return this.lastAssistantMessageParts.some(
+      (part) => part.type === 'reasoning' && part.state === 'streaming'
+    );
+  }
+
+  // Check if there's any reasoning part (even if done)
+  get hasReasoning(): boolean {
+    return this.lastAssistantMessageParts.some((part) => part.type === 'reasoning');
+  }
+
+  // Check if there's any text content in the last assistant message
+  get hasTextContent(): boolean {
+    return this.lastAssistantMessageParts.some(
+      (part) => part.type === 'text' && part.text?.trim().length > 0
+    );
+  }
+
+  // Show pulsing dots immediately when user sends a message, hide when:
+  // - Recipe search starts (show "Preparing/Searching..." instead)
+  // - Reasoning starts (reasoning component shows "Thinking...")
+  // - Text content arrives (content speaks for itself)
+  get showThinking(): boolean {
+    return (
+      this.isLoading &&
+      !this.isRecipeSearchInProgress &&
+      !this.hasReasoning &&
+      !this.hasTextContent
+    );
+  }
+
+  // Show "Preparing search..." when optimizeRecipeQuery is running
+  get showPreparingSearch(): boolean {
+    return this.isLoading && this.isOptimizeQueryLoading && !this.hasRecipeSearchOutput;
+  }
+
+  // Show "Searching recipes..." when findRecipe is running (after optimize is done)
+  get showSearching(): boolean {
+    return (
+      this.isLoading &&
+      this.isFindRecipeLoading &&
+      !this.isOptimizeQueryLoading &&
+      !this.hasRecipeSearchOutput
+    );
+  }
+
+  // Check if any reasoning is currently streaming in a specific message
+  isReasoningStreaming(message: UIMessage): boolean {
+    return (
+      message.parts?.some((p: any) => p.type === 'reasoning' && p.state === 'streaming') ?? false
+    );
+  }
+
+  // Check if reasoning is open for a specific part
+  isReasoningOpen(messageId: string, partIndex: number): boolean {
+    const key = `${messageId}-${partIndex}`;
+    return this.reasoningStates.get(key)?.isOpen ?? false;
+  }
+
+  // Toggle reasoning open/close
+  toggleReasoning(event: Event) {
+    const button = event.currentTarget as HTMLElement;
+    const container = button.closest('.reasoning-container') as HTMLElement;
+    if (container) {
+      const isOpen = container.classList.contains('is-open');
+      if (isOpen) {
+        container.classList.remove('is-open');
+      } else {
+        container.classList.add('is-open');
+      }
+    }
+  }
 
   toggleChat() {
     this.isOpen.update((v) => !v);
@@ -46,83 +274,17 @@ export class AiChat {
     this.inputMessage.set(target.value);
   }
 
-  async sendMessage() {
+  sendMessage() {
     const message = this.inputMessage().trim();
-    if (!message || this.isLoading()) return;
+    if (!message || this.isLoading) return;
 
-    // Add user message
-    this.messages.update((msgs) => [
-      ...msgs,
-      { role: 'user', content: message, timestamp: new Date() },
-    ]);
     this.inputMessage.set('');
-    this.isLoading.set(true);
+
+    // Use the Chat sendMessage method - it handles everything
+    this.chat.sendMessage({ text: message });
 
     // Scroll to bottom
     setTimeout(() => this.scrollToBottom(), 100);
-
-    try {
-      // Build conversation history for context (exclude recipes, only text)
-      const conversationHistory = this.messages()
-        .filter((m) => m.role === 'user' || m.role === 'assistant')
-        .map((m) => ({ role: m.role, content: m.content }));
-
-      // Add current message
-      conversationHistory.push({ role: 'user' as const, content: message });
-
-      // Search for recipes using semantic search with conversation history
-      const response = await this.supabase.searchRecipes(conversationHistory, 3);
-
-      let assistantMessage: ChatMessage;
-
-      if (response.success) {
-        // Use the AI-generated message from Structured Outputs
-        const aiMessage = response.message || 'Hier is wat ik voor je heb gevonden!';
-        const recipes = response.results || [];
-
-        if (recipes.length > 0) {
-          assistantMessage = {
-            role: 'assistant',
-            content: aiMessage,
-            timestamp: new Date(),
-            recipes: recipes.map((r) => ({
-              id: r.id,
-              title: r.title,
-              description: r.description,
-              image_url: r.image_url,
-              similarity: r.similarity,
-            })),
-          };
-        } else {
-          // No recipes found, but still show AI message
-          assistantMessage = {
-            role: 'assistant',
-            content: aiMessage,
-            timestamp: new Date(),
-          };
-        }
-      } else {
-        assistantMessage = {
-          role: 'assistant',
-          content: `Oops, something went wrong. 😅 ${response.error || 'Please try again.'}`,
-          timestamp: new Date(),
-        };
-      }
-
-      this.messages.update((msgs) => [...msgs, assistantMessage]);
-    } catch {
-      this.messages.update((msgs) => [
-        ...msgs,
-        {
-          role: 'assistant',
-          content: 'Something went wrong. Please try again later.',
-          timestamp: new Date(),
-        },
-      ]);
-    } finally {
-      this.isLoading.set(false);
-      setTimeout(() => this.scrollToBottom(), 100);
-    }
   }
 
   private scrollToBottom() {
