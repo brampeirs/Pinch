@@ -216,10 +216,7 @@ export class AiChat {
   // - Text content arrives (content speaks for itself)
   get showThinking(): boolean {
     return (
-      this.isLoading &&
-      !this.isRecipeSearchInProgress &&
-      !this.hasReasoning &&
-      !this.hasTextContent
+      this.isLoading && !this.isRecipeSearchInProgress && !this.hasReasoning && !this.hasTextContent
     );
   }
 

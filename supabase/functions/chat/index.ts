@@ -23,13 +23,19 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 // Initialize tools
 const findRecipeTool = createFindRecipeTool(supabase);
 
-// Create the ToolLoopAgent - no reasoning to keep responses fast
+// Create the ToolLoopAgent with reasoning enabled (using responses API)
 const recipeAgent = new ToolLoopAgent({
   model: openai('gpt-4o-mini'),
   tools: {
     optimizeRecipeQuery: optimizeRecipeQueryTool,
     findRecipe: findRecipeTool,
   },
+  // providerOptions: {
+  //   openai: {
+  //     reasoningSummary: 'detailed',
+  //     reasoningEffort: 'medium',
+  //   },
+  // },
   instructions: `You are a friendly cooking assistant for a recipe app called Pinch.
 
 **CRITICAL WORKFLOW - MUST FOLLOW:**
@@ -72,7 +78,7 @@ Deno.serve(async (req: Request) => {
       agent: recipeAgent,
       uiMessages: messages,
       streamOptions: {
-        sendReasoning: false,
+        sendReasoning: true,
       },
     });
 
