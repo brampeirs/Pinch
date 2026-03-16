@@ -57,17 +57,40 @@ export class AiChat {
 
   isOpen = signal(false);
   inputMessage = signal('');
+  autoScrollEnabled = signal(true);
+
+  private readonly bottomSnapThreshold = 72;
+  private alignNextResponseToTop = false;
+  private latestUserMessageId: string | null = null;
 
   // Track reasoning open/close state per message
   private reasoningStates = new Map<string, ReasoningState>();
   private previousReasoningStreaming = new Map<string, boolean>();
 
   constructor() {
-    // Auto-scroll when messages change - we check messages length in the effect
+    // Auto-scroll only when user is near the bottom or when we intentionally align a new turn.
     effect(() => {
-      // Track messages array to trigger effect when new messages arrive
-      if (this.chat.messages.length > 0) {
-        setTimeout(() => this.scrollToBottom(), 100);
+      if (this.chat.messages.length === 0) {
+        return;
+      }
+
+      setTimeout(() => {
+        if (this.alignNextResponseToTop && this.latestUserMessageId) {
+          this.scrollMessageToTop(this.latestUserMessageId);
+          return;
+        }
+
+        if (this.autoScrollEnabled()) {
+          this.scrollToBottom();
+        }
+      }, 40);
+
+      if (!this.isLoading) {
+        this.alignNextResponseToTop = false;
+        this.latestUserMessageId = null;
+        if (this.isNearBottom()) {
+          this.autoScrollEnabled.set(true);
+        }
       }
     });
   }
@@ -280,15 +303,75 @@ export class AiChat {
     // Use the Chat sendMessage method - it handles everything
     this.chat.sendMessage({ text: message });
 
-    // Scroll to bottom
-    setTimeout(() => this.scrollToBottom(), 100);
+    // Keep the just-sent prompt near the top of the viewport (ChatGPT-like turn framing).
+    this.alignNextResponseToTop = true;
+    this.autoScrollEnabled.set(false);
+    setTimeout(() => {
+      let latestUserMessageId: string | null = null;
+      for (let i = this.chat.messages.length - 1; i >= 0; i--) {
+        const message = this.chat.messages[i] as UIMessage;
+        if (message.role === 'user') {
+          latestUserMessageId = message.id;
+          break;
+        }
+      }
+
+      this.latestUserMessageId = latestUserMessageId;
+      if (this.latestUserMessageId) {
+        this.scrollMessageToTop(this.latestUserMessageId, true);
+      }
+    }, 60);
   }
 
-  private scrollToBottom() {
+  onMessagesScroll() {
+    if (!this.messagesContainer) return;
+
+    if (this.isNearBottom()) {
+      this.autoScrollEnabled.set(true);
+      return;
+    }
+
+    // Respect manual browsing: once user leaves the bottom area we stop auto-follow.
+    this.autoScrollEnabled.set(false);
+    this.alignNextResponseToTop = false;
+  }
+
+  jumpToLatest() {
+    this.autoScrollEnabled.set(true);
+    this.alignNextResponseToTop = false;
+    this.scrollToBottom(true);
+  }
+
+  private scrollToBottom(smooth = false) {
     if (this.messagesContainer) {
       const el = this.messagesContainer.nativeElement;
+      if (smooth) {
+        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+        return;
+      }
       el.scrollTop = el.scrollHeight;
     }
+  }
+
+  private scrollMessageToTop(messageId: string, smooth = false) {
+    if (!this.messagesContainer) return;
+    const container = this.messagesContainer.nativeElement as HTMLElement;
+    const target = container.querySelector(`[data-message-id="${messageId}"]`) as HTMLElement | null;
+    if (!target) return;
+
+    const top = Math.max(0, target.offsetTop - 12);
+    if (smooth) {
+      container.scrollTo({ top, behavior: 'smooth' });
+      return;
+    }
+    container.scrollTop = top;
+  }
+
+  private isNearBottom(): boolean {
+    if (!this.messagesContainer) return true;
+    const el = this.messagesContainer.nativeElement as HTMLElement;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    return distance <= this.bottomSnapThreshold;
   }
 
   handleKeydown(event: KeyboardEvent) {
