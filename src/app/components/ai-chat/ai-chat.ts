@@ -332,13 +332,16 @@ export class AiChat {
     this.updateScrollState();
   }
 
+  stopMessage() {
+    this.chat.stop();
+  }
+
   jumpToLatest() {
     this.autoScrollEnabled.set(true);
     this.alignNextResponseToTop = false;
     this.showJumpToLatest.set(false);
     this.scrollToBottom(true);
   }
-
 
   private updateScrollState() {
     if (!this.messagesContainer) return;
@@ -370,7 +373,9 @@ export class AiChat {
   private scrollMessageToTop(messageId: string, smooth = false) {
     if (!this.messagesContainer) return;
     const container = this.messagesContainer.nativeElement as HTMLElement;
-    const target = container.querySelector(`[data-message-id="${messageId}"]`) as HTMLElement | null;
+    const target = container.querySelector(
+      `[data-message-id="${messageId}"]`
+    ) as HTMLElement | null;
     if (!target) return;
 
     const top = Math.max(0, target.offsetTop - 12);
