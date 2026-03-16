@@ -33,6 +33,7 @@ interface ReasoningState {
 })
 export class AiChat {
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
+  @ViewChild('textareaInput') textareaInput!: ElementRef<HTMLTextAreaElement>;
 
   protected readonly viewModeService = inject(ChatViewModeService);
 
@@ -302,8 +303,19 @@ export class AiChat {
   }
 
   updateInput(event: Event) {
-    const target = event.target as HTMLInputElement;
+    const target = event.target as HTMLTextAreaElement;
     this.inputMessage.set(target.value);
+    this.resizeTextarea();
+  }
+
+  private resizeTextarea() {
+    const textarea = this.textareaInput?.nativeElement;
+    if (!textarea) return;
+
+    // Reset height to auto to get the correct scrollHeight
+    textarea.style.height = 'auto';
+    // Set to scrollHeight, capped by CSS max-height
+    textarea.style.height = `${textarea.scrollHeight}px`;
   }
 
   sendMessage() {
@@ -311,6 +323,10 @@ export class AiChat {
     if (!message || this.isLoading) return;
 
     this.inputMessage.set('');
+    // Reset textarea height after sending
+    if (this.textareaInput?.nativeElement) {
+      this.textareaInput.nativeElement.style.height = 'auto';
+    }
 
     // Use the Chat sendMessage method - it handles everything
     this.chat.sendMessage({ text: message });

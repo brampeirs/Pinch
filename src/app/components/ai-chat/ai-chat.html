@@ -71,7 +71,7 @@
     <div class="flex justify-end" [attr.data-message-id]="message.id">
       <div class="max-w-[85%] rounded-2xl bg-muted px-4 py-2.5">
         @for (part of message.parts; track $index) { @if (part.type === 'text') {
-        <p class="whitespace-pre-wrap text-[14px] leading-relaxed text-foreground">
+        <p class="whitespace-pre-wrap text-[16px] leading-relaxed text-foreground">
           {{ part.text }}
         </p>
         } }
@@ -279,30 +279,33 @@
 
   <!-- Input area -->
   <div class="border-t border-border bg-background p-4">
-    <div class="flex gap-2">
-      <input
-        type="text"
+    <div
+      class="chat-input-box flex items-end gap-2 rounded-2xl border border-input bg-muted/50 px-3 py-2 transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring"
+    >
+      <textarea
+        #textareaInput
         [value]="inputMessage()"
         (input)="updateInput($event)"
         (keydown)="handleKeydown($event)"
         placeholder="Ask about recipes..."
-        class="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-[14px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring"
-      />
+        rows="1"
+        class="chat-textarea flex-1 resize-none border-0 bg-transparent py-1.5 text-[16px] text-foreground outline-none placeholder:text-muted-foreground"
+      ></textarea>
       @if(!isLoading) {
       <button
         (click)="sendMessage()"
         [disabled]="!inputMessage().trim()"
-        class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
       >
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7" />
         </svg>
       </button>
-      } @else if(isLoading ) {
+      } @else {
       <!-- stop button -->
       <button
         (click)="stopMessage()"
-        class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
       >
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />

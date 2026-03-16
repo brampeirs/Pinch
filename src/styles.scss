@@ -29,3 +29,9 @@
   --color-primary-foreground: #fafafa;
   --color-destructive: #ef4444;
 }
+
+// Global button cursor fix
+button,
+[role='button'] {
+  cursor: pointer;
+}

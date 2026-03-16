@@ -278,3 +278,30 @@
     }
   }
 }
+
+// =====================
+// Chat Input Box - ChatGPT style
+// =====================
+.chat-input-box {
+  .chat-textarea {
+    min-height: 24px;
+    max-height: 200px;
+    overflow-y: auto;
+    line-height: 1.5;
+
+    // Hide scrollbar when not needed, show when scrollable
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--color-muted-foreground, #71717a);
+      border-radius: 2px;
+      opacity: 0.5;
+    }
+  }
+}
