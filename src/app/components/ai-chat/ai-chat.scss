@@ -9,6 +9,28 @@
   font-family: var(--chat-font);
 }
 
+.messages-container {
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+.jump-to-latest {
+  position: sticky;
+  bottom: 0.5rem;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--color-border, #e4e4e7);
+  background: var(--color-card, #ffffff);
+  color: var(--color-foreground, #0a0a0a);
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0.45rem 0.7rem;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 10%);
+}
+
 
 
 // =====================
