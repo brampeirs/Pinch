@@ -14,14 +14,6 @@ export const appConfig: ApplicationConfig = {
         anchorScrolling: 'enabled',
       })
     ),
-    provideMarkdown({
-      markedOptions: {
-        provide: MARKED_OPTIONS,
-        useValue: {
-          gfm: true,
-          breaks: true, // Convert \n to <br>
-        },
-      },
-    }),
+    provideMarkdown(),
   ],
 };
