@@ -2,11 +2,56 @@
 
 :host {
   --chat-font: 'Geist', 'Geist Fallback', system-ui, sans-serif;
+  --chat-sidebar-width: 440px;
 }
 
 // Chat window base
 .chat-window {
   font-family: var(--chat-font);
+}
+
+// Floating mode transitions - smooth animations for floating window
+.chat-floating {
+  transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    top 0.3s cubic-bezier(0.4, 0, 0.2, 1), height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+// Floating mode - smaller, rounded, with shadow
+.chat-floating {
+  bottom: 1.5rem; // bottom-6
+  right: 1.5rem; // right-6
+  width: var(--chat-sidebar-width);
+  height: calc(100vh - 100px);
+  max-height: 700px;
+  border-radius: 0.75rem; // rounded-xl
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); // shadow-lg
+}
+
+// Sidebar mode - starts from top, behind header, so border continues seamlessly
+.chat-sidebar {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--chat-sidebar-width);
+  height: auto;
+  max-height: none;
+  border-radius: 0;
+  border-right: none;
+  border-bottom: none;
+  border-top: none;
+  border-left: 1px solid rgb(226 232 240 / 0.6); // Match header border color - runs full height
+  box-shadow: none;
+  z-index: 40; // Below header (z-50) so header stays on top
+
+  // Add padding-top to push content below the header
+  padding-top: 64px; // Header height (h-16)
+}
+
+// Floating mode header - subtle separator
+.chat-floating .chat-header {
+  border-bottom: 1px solid var(--color-border, #e4e4e7);
 }
 
 .messages-container {
@@ -41,8 +86,6 @@
     box-shadow: 0 8px 20px rgb(0 0 0 / 18%);
   }
 }
-
-
 
 // =====================
 // Reasoning Component - Vercel AI Elements style
@@ -204,7 +247,9 @@
 }
 
 @keyframes dot-pulse {
-  0%, 80%, 100% {
+  0%,
+  80%,
+  100% {
     opacity: 0.3;
     transform: scale(0.8);
   }

@@ -1,9 +1,11 @@
-import { Component, signal, ElementRef, ViewChild, effect } from '@angular/core';
+import { Component, signal, ElementRef, ViewChild, effect, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Chat } from '@ai-sdk/angular';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import { MarkdownComponent } from 'ngx-markdown';
 import { environment } from '../../../environments/environment';
+import { ChatViewModeService } from '../../services/chat-view-mode.service';
+import { ChatModeToggle } from './chat-mode-toggle/chat-mode-toggle';
 
 // Type for recipe data returned by the findRecipe tool
 export interface RecipeResult {
@@ -27,10 +29,12 @@ interface ReasoningState {
   selector: 'app-ai-chat',
   templateUrl: './ai-chat.html',
   styleUrl: './ai-chat.scss',
-  imports: [RouterLink, MarkdownComponent],
+  imports: [RouterLink, MarkdownComponent, ChatModeToggle],
 })
 export class AiChat {
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
+
+  protected readonly viewModeService = inject(ChatViewModeService);
 
   // Chat instance from @ai-sdk/angular with transport configuration
   public chat = new Chat({
@@ -290,7 +294,11 @@ export class AiChat {
   }
 
   toggleChat() {
-    this.isOpen.update((v) => !v);
+    this.isOpen.update((v) => {
+      const newValue = !v;
+      this.viewModeService.setOpen(newValue);
+      return newValue;
+    });
   }
 
   updateInput(event: Event) {
