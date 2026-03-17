@@ -289,6 +289,7 @@
                     [value]="inputMessage()"
                     (input)="updateInput($event)"
                     (keydown)="handleKeydown($event)"
+                    (focus)="onInputFocus()"
                     placeholder="Ask about recipes..."
                     rows="1"
                     class="chat-textarea flex-1 resize-none border-0 bg-transparent py-1.5 text-[16px] text-foreground outline-none placeholder:text-muted-foreground"

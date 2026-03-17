@@ -431,4 +431,17 @@ export class AiChat {
             this.sendMessage();
         }
     }
+
+    onInputFocus() {
+        // On mobile, when the keyboard opens, scroll the input into view
+        // Use a delay to let the keyboard animation complete
+        if (this.isMobile()) {
+            setTimeout(() => {
+                this.textareaInput?.nativeElement?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                });
+            }, 300);
+        }
+    }
 }
