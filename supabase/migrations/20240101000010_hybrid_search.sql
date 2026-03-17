@@ -12,7 +12,7 @@ DROP FUNCTION IF EXISTS search_recipes(vector(1536), int, float);
 
 -- Create new search_recipes with filter parameters
 CREATE OR REPLACE FUNCTION search_recipes(
-  query_embedding vector(1536),
+  query_embedding extensions.vector(1536),
   match_count int DEFAULT 5,
   match_threshold float DEFAULT 0.25,
   filter_category text DEFAULT NULL,
