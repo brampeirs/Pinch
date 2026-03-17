@@ -1,43 +1,16 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import { ToolLoopAgent, stepCountIs, createAgentUIStreamResponse } from 'npm:ai';
-import { createOpenAI } from 'npm:@ai-sdk/openai';
+import { ToolLoopAgent, stepCountIs, createAgentUIStreamResponse, createGateway } from 'npm:ai';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { createFindRecipeTool } from './tools/find-recipe.ts';
 import { createCreateRecipeTool } from './tools/create-recipe.ts';
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-// Initialize providers
-const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
-const openai = createOpenAI({ apiKey: openaiApiKey });
-
-// Initialize Supabase client
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-// Initialize tools
-const findRecipeTool = createFindRecipeTool(supabase);
-const createRecipeTool = createCreateRecipeTool(supabase);
-
-// Create the ToolLoopAgent with reasoning enabled (using responses API)
-const recipeAgent = new ToolLoopAgent({
-  model: openai('gpt-4o-mini'),
-  tools: {
-    findRecipe: findRecipeTool,
-    createRecipe: createRecipeTool,
-  },
-  // providerOptions: {
-  //   openai: {
-  //     reasoningSummary: 'detailed',
-  //     reasoningEffort: 'medium',
-  //   },
-  // },
-  instructions: `You are a friendly cooking assistant for a recipe app called Pinch.
+const AGENT_INSTRUCTIONS = `You are a friendly cooking assistant for a recipe app called Pinch.
 
 **FINDING RECIPES - CRITICAL RULES:**
 When a user asks for recipes or mentions ingredients:
@@ -68,42 +41,78 @@ When a user wants to save/create/add a recipe:
 
 Available categories: Pasta, Soups, Salads, Main Dishes, Desserts, Breakfast
 Common tags: quick, vegetarian, vegan, spicy, comfort food, healthy
-`,
-  stopWhen: stepCountIs(15),
-});
+`;
+
+// Lazy initialization - only created on first POST request
+let recipeAgent: ToolLoopAgent | null = null;
+
+function getRecipeAgent(): ToolLoopAgent {
+    if (recipeAgent) return recipeAgent;
+
+    // Initialize AI Gateway
+    const aiGatewayApiKey = Deno.env.get('AI_GATEWAY_API_KEY');
+    if (!aiGatewayApiKey) {
+        throw new Error('AI_GATEWAY_API_KEY is not set');
+    }
+    const aiGateway = createGateway({ apiKey: aiGatewayApiKey });
+
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Initialize tools
+    const findRecipeTool = createFindRecipeTool(supabase);
+    const createRecipeTool = createCreateRecipeTool(supabase);
+
+    // Create the ToolLoopAgent
+    recipeAgent = new ToolLoopAgent({
+        model: aiGateway.languageModel('openai/gpt-4o-mini'),
+        tools: {
+            findRecipe: findRecipeTool,
+            createRecipe: createRecipeTool,
+        },
+        instructions: AGENT_INSTRUCTIONS,
+        stopWhen: stepCountIs(15),
+    });
+
+    return recipeAgent;
+}
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
+    // Handle CORS preflight FIRST - before any initialization
+    if (req.method === 'OPTIONS') {
+        return new Response(null, { status: 204, headers: corsHeaders });
+    }
 
-  try {
-    const { messages } = await req.json();
+    try {
+        const { messages } = await req.json();
+        const agent = getRecipeAgent();
 
-    const response = await createAgentUIStreamResponse({
-      agent: recipeAgent,
-      uiMessages: messages,
-      streamOptions: {
-        sendReasoning: true,
-      },
-    });
+        const response = await createAgentUIStreamResponse({
+            agent,
+            uiMessages: messages,
+            streamOptions: {
+                sendReasoning: true,
+            },
+        });
 
-    // Add CORS headers to the streaming response
-    const headers = new Headers(response.headers);
-    Object.entries(corsHeaders).forEach(([key, value]) => {
-      headers.set(key, value);
-    });
+        // Add CORS headers to the streaming response
+        const headers = new Headers(response.headers);
+        Object.entries(corsHeaders).forEach(([key, value]) => {
+            headers.set(key, value);
+        });
 
-    return new Response(response.body, {
-      status: response.status,
-      headers,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('❌ Chat error:', message);
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
+        return new Response(response.body, {
+            status: response.status,
+            headers,
+        });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error('❌ Chat error:', message);
+        return new Response(JSON.stringify({ error: message }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+    }
 });
