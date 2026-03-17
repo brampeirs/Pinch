@@ -107,6 +107,13 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ success: false, error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -116,7 +123,15 @@ Deno.serve(async (req: Request) => {
     }
 
     // Parse request body
-    const body: CreateRecipeRequest = await req.json();
+    let body: CreateRecipeRequest;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid JSON in request body' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Validate request
     const validation = validateRequest(body);
@@ -144,6 +159,10 @@ Deno.serve(async (req: Request) => {
 
     if (rpcError) {
       throw new Error(`RPC error: ${rpcError.message}`);
+    }
+
+    if (!rpcData) {
+      throw new Error('RPC returned no data');
     }
 
     // Fire-and-forget: trigger embedding generation
