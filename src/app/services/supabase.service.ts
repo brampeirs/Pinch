@@ -3,6 +3,22 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
 import { Database } from '../models/database.types';
 
+interface CreateRecipeEdgeFunctionResponse {
+  success: boolean;
+  data?: {
+    id: string;
+    title: string;
+    description: string | null;
+    image_url: string | null;
+    category_name: string | null;
+    prep_time: number | null;
+    cook_time: number | null;
+    servings: number | null;
+    created_at: string;
+  };
+  error?: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -147,17 +163,26 @@ export class SupabaseService {
     steps: { step_number: number; description: string }[]
   ) {
     // Call edge function instead of direct DB operations
-    const { data, error } = await this.supabase.functions.invoke('create-recipe', {
-      body: { recipe, ingredients, steps },
-    });
+    const { data, error } = await this.supabase.functions.invoke<CreateRecipeEdgeFunctionResponse>(
+      'create-recipe',
+      { body: { recipe, ingredients, steps } }
+    );
 
     if (error) {
       return { data: null, error };
     }
 
+    if (!data) {
+      return { data: null, error: new Error('Edge function returned no data') };
+    }
+
     // Edge function returns { success: boolean, data?: {...}, error?: string }
     if (!data.success) {
       return { data: null, error: new Error(data.error || 'Unknown error') };
+    }
+
+    if (!data.data) {
+      return { data: null, error: new Error('Edge function returned success but no data') };
     }
 
     return { data: data.data, error: null };
