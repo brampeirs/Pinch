@@ -6,8 +6,11 @@ import { createCreateRecipeTool } from './tools/create-recipe.ts';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers':
+        'authorization, x-client-info, apikey, content-type, accept, origin, referer, user-agent, sec-fetch-dest, sec-fetch-mode, sec-fetch-site',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Max-Age': '86400', // Cache preflight for 24 hours
+    'Access-Control-Expose-Headers': 'content-type, x-request-id',
 };
 
 const AGENT_INSTRUCTIONS = `You are a friendly cooking assistant for a recipe app called Pinch.
@@ -80,14 +83,28 @@ function getRecipeAgent(): ToolLoopAgent {
 }
 
 Deno.serve(async (req: Request) => {
+    const origin = req.headers.get('origin') ?? 'unknown';
+    console.log(`🌐 [Chat] ${req.method} request from origin: ${origin}`);
+
     // Handle CORS preflight FIRST - before any initialization
     if (req.method === 'OPTIONS') {
+        console.log('✅ [Chat] Responding to OPTIONS preflight');
         return new Response(null, { status: 204, headers: corsHeaders });
     }
 
     try {
-        const { messages } = await req.json();
+        const body = await req.json();
+        const { messages } = body;
+
+        // Debug logging for mobile troubleshooting
+        console.log('📥 [Chat] Incoming request:', {
+            messageCount: messages?.length ?? 0,
+            lastMessage: messages?.[messages.length - 1],
+            userAgent: req.headers.get('user-agent'),
+        });
+
         const agent = getRecipeAgent();
+        console.log('🤖 [Chat] Agent initialized, starting stream...');
 
         const response = await createAgentUIStreamResponse({
             agent,
@@ -96,6 +113,8 @@ Deno.serve(async (req: Request) => {
                 sendReasoning: true,
             },
         });
+
+        console.log('✅ [Chat] Stream response created');
 
         // Add CORS headers to the streaming response
         const headers = new Headers(response.headers);
