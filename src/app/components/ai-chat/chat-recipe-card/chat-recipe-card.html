@@ -1,0 +1,29 @@
+<a
+  [routerLink]="['/recipes', recipe().id]"
+  class="group block overflow-hidden rounded-lg border border-border bg-card transition-colors hover:bg-accent"
+>
+  <!-- Recipe content - horizontal layout -->
+  <div class="flex gap-3 p-3">
+    <div class="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-slate-100">
+      <img
+        [src]="displayImage()"
+        [alt]="recipe().title"
+        class="h-full w-full object-cover"
+      />
+    </div>
+    <div class="flex-1 min-w-0">
+      <h4 class="font-medium text-foreground group-hover:text-foreground">
+        {{ recipe().title }}
+      </h4>
+      @if (recipe().description) {
+      <p class="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+        {{ recipe().description }}
+      </p>
+      }
+      <span class="mt-1 inline-block text-[10px] text-muted-foreground/70">
+        {{ recipe().similarity }}% match
+      </span>
+    </div>
+  </div>
+</a>
+

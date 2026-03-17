@@ -3,7 +3,7 @@ import { ToolLoopAgent, stepCountIs, createAgentUIStreamResponse } from 'npm:ai'
 import { createOpenAI } from 'npm:@ai-sdk/openai';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { createFindRecipeTool } from './tools/find-recipe.ts';
-import { optimizeRecipeQueryTool } from './tools/optimize-recipe-query.ts';
+import { createCreateRecipeTool } from './tools/create-recipe.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,12 +22,14 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Initialize tools
 const findRecipeTool = createFindRecipeTool(supabase);
+const createRecipeTool = createCreateRecipeTool(supabase);
 
 // Create the ToolLoopAgent with reasoning enabled (using responses API)
 const recipeAgent = new ToolLoopAgent({
   model: openai('gpt-4o-mini'),
   tools: {
     findRecipe: findRecipeTool,
+    createRecipe: createRecipeTool,
   },
   // providerOptions: {
   //   openai: {
@@ -37,16 +39,19 @@ const recipeAgent = new ToolLoopAgent({
   // },
   instructions: `You are a friendly cooking assistant for a recipe app called Pinch.
 
-**CRITICAL WORKFLOW - MUST FOLLOW:**
+**FINDING RECIPES - CRITICAL RULES:**
 When a user asks for recipes or mentions ingredients:
-1. FIRST: Call findRecipe with the optimized query from step 1
-2. NEVER skip step 1 - always optimize before searching
+1. Call findRecipe with optimized search terms
+2. STOP IMMEDIATELY after the tool call - DO NOT generate ANY text
+3. The UI automatically renders beautiful recipe cards from the tool result
+4. ANY text you generate will appear AFTER the cards and look broken/ugly
+5. Your response after findRecipe must be COMPLETELY EMPTY - zero characters
 
-**RECIPE RESULTS - EXTREMELY IMPORTANT:**
-After showing recipe results, DO NOT write any text response.
-The recipe cards are automatically displayed by the UI - they speak for themselves.
-Your job is done after calling findRecipe. Say NOTHING after the tool calls.
-No "here are the recipes", no descriptions, no follow-up questions. Just silence.
+**CREATING RECIPES:**
+When a user wants to save/create/add a recipe:
+- Extract title, ingredients (with amounts/units), and steps from their message
+- Call createRecipe with the structured data
+- After success, briefly confirm the recipe was saved
 
 **Other capabilities:**
 - Answer cooking questions (be helpful but concise)
@@ -54,19 +59,15 @@ No "here are the recipes", no descriptions, no follow-up questions. Just silence
 
 **Response style:**
 - Use short paragraphs
-- Use headings (##) for sections when useful
 - Use bullet lists for multiple items
 - Use numbered lists for steps
 - Use **bold** for key terms
-- Use code blocks for code or configuration
 - Avoid long text blocks
-- Prefer structured, scannable answers
-- If you need a linebreak, use /n/n
 
 Available categories: Pasta, Soups, Salads, Main Dishes, Desserts, Breakfast
 Common tags: quick, vegetarian, vegan, spicy, comfort food, healthy
 `,
-  stopWhen: stepCountIs(5),
+  stopWhen: stepCountIs(15),
 });
 
 Deno.serve(async (req: Request) => {

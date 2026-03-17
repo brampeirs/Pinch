@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <rect width="400" height="300" fill="url(#grad-breakfast)"/>
+  <defs>
+    <linearGradient id="grad-breakfast" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fef9c3"/>
+      <stop offset="100%" style="stop-color:#fef08a"/>
+    </linearGradient>
+  </defs>
+  <!-- Pan -->
+  <g transform="translate(200, 155)">
+    <ellipse cx="0" cy="5" rx="70" ry="25" fill="#44403c" opacity="0.3"/>
+    <ellipse cx="0" cy="0" rx="65" ry="22" fill="#57534e" stroke="#44403c" stroke-width="3"/>
+    <line x1="65" y1="0" x2="120" y2="-20" stroke="#44403c" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <!-- Egg white -->
+  <ellipse cx="200" cy="145" rx="40" ry="25" fill="#fefce8" stroke="#fef08a" stroke-width="2"/>
+  <!-- Egg yolk -->
+  <circle cx="200" cy="145" r="15" fill="#fbbf24"/>
+  <circle cx="196" cy="142" r="4" fill="#fef3c7" opacity="0.6"/>
+  <!-- Bacon strips -->
+  <g transform="translate(145, 175)" fill="#dc2626" opacity="0.6">
+    <rect x="0" y="0" width="40" height="6" rx="2"/>
+    <rect x="5" y="10" width="35" height="6" rx="2"/>
+  </g>
+  <text x="200" y="270" text-anchor="middle" font-family="system-ui" font-size="14" fill="#a16207" opacity="0.5">Breakfast</text>
+</svg>
+

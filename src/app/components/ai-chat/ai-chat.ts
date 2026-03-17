@@ -6,17 +6,10 @@ import { MarkdownComponent } from 'ngx-markdown';
 import { environment } from '../../../environments/environment';
 import { ChatViewModeService } from '../../services/chat-view-mode.service';
 import { ChatModeToggle } from './chat-mode-toggle/chat-mode-toggle';
+import { ChatRecipeCard, ChatRecipe } from './chat-recipe-card/chat-recipe-card';
 
-// Type for recipe data returned by the findRecipe tool
-export interface RecipeResult {
-  id: string;
-  title: string;
-  description: string | null;
-  imageUrl: string | null;
-  similarity: number;
-  prepTime: number | null;
-  cookTime: number | null;
-}
+// Re-export for backward compatibility
+export type RecipeResult = ChatRecipe;
 
 // Track reasoning state for auto-open/close
 interface ReasoningState {
@@ -29,7 +22,7 @@ interface ReasoningState {
   selector: 'app-ai-chat',
   templateUrl: './ai-chat.html',
   styleUrl: './ai-chat.scss',
-  imports: [RouterLink, MarkdownComponent, ChatModeToggle],
+  imports: [RouterLink, MarkdownComponent, ChatModeToggle, ChatRecipeCard],
 })
 export class AiChat {
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;

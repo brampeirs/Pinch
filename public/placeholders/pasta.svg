@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <rect width="400" height="300" fill="url(#grad-pasta)"/>
+  <defs>
+    <linearGradient id="grad-pasta" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fef3c7"/>
+      <stop offset="100%" style="stop-color:#fde68a"/>
+    </linearGradient>
+  </defs>
+  <!-- Fork -->
+  <g transform="translate(200, 150)" stroke="#d97706" stroke-width="4" stroke-linecap="round">
+    <line x1="-30" y1="-50" x2="-30" y2="50"/>
+    <line x1="-30" y1="-50" x2="-30" y2="-20"/>
+    <line x1="-15" y1="-50" x2="-15" y2="-20"/>
+    <line x1="0" y1="-50" x2="0" y2="-20"/>
+    <path d="M-35,-20 Q-15,-10 5,-20" fill="none"/>
+  </g>
+  <!-- Pasta swirl -->
+  <g transform="translate(200, 150)" stroke="#f59e0b" stroke-width="6" fill="none" opacity="0.6">
+    <path d="M20,-20 Q60,0 40,40 Q20,70 -10,50 Q-40,30 -20,-10 Q0,-40 30,-30"/>
+    <path d="M40,10 Q70,30 50,60"/>
+  </g>
+  <text x="200" y="270" text-anchor="middle" font-family="system-ui" font-size="14" fill="#92400e" opacity="0.5">Pasta</text>
+</svg>
+

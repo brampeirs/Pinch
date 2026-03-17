@@ -1,6 +1,7 @@
-import { Component, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Tables } from '../../models/database.types';
+import { getDisplayImage } from '../../utils/placeholder';
 
 // Database types using generated types
 type DbRecipe = Tables<'recipes'>;
@@ -43,4 +44,10 @@ export function mapRecipeToUI(recipe: RecipeWithCategory): Recipe {
 })
 export class RecipeCard {
   recipe = input.required<Recipe>();
+
+  /** Returns the image URL or a category-specific placeholder */
+  displayImage = computed(() => {
+    const r = this.recipe();
+    return getDisplayImage(r.imageUrl, r.category);
+  });
 }

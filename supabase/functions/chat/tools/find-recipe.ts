@@ -77,34 +77,43 @@ Returns matching recipes with title, description, and similarity score.`,
 
       if (error) {
         console.error('❌ Search error:', error);
-        return { success: false, error: error.message, recipes: [], message: 'Error searching recipes.' };
+        return {
+          success: false,
+          error: error.message,
+          recipes: [],
+          message: 'Error searching recipes.',
+        };
       }
 
-      const recipes = results?.map(
-        (r: {
-          id: string;
-          title: string;
-          description: string | null;
-          image_url: string | null;
-          similarity: number;
-          prep_time: number | null;
-          cook_time: number | null;
-        }) => ({
-          id: r.id,
-          title: r.title,
-          description: r.description,
-          imageUrl: r.image_url,
-          similarity: r.similarity,
-          prepTime: r.prep_time,
-          cookTime: r.cook_time,
-        })
-      ) || [];
+      const recipes =
+        results?.map(
+          (r: {
+            id: string;
+            title: string;
+            description: string | null;
+            image_url: string | null;
+            category_name: string | null;
+            similarity: number;
+            prep_time: number | null;
+            cook_time: number | null;
+          }) => ({
+            id: r.id,
+            title: r.title,
+            description: r.description,
+            imageUrl: r.image_url,
+            category: r.category_name,
+            similarity: r.similarity,
+            prepTime: r.prep_time,
+            cookTime: r.cook_time,
+          })
+        ) || [];
 
       // Generate a brief message based on results
       const count = recipes.length;
-      const message = count === 0
-        ? 'No recipes found. Try different ingredients or search terms.'
-        : count === 1
+      const message =
+        count === 0
+          ? 'No recipes found. Try different ingredients or search terms.'
+          : count === 1
           ? 'Found 1 recipe:'
           : `Found ${count} recipes:`;
 

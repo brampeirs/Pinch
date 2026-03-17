@@ -1,105 +1,16 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import {
+  createRecipeRequestSchema,
+  type CreateRecipeRequest,
+  type CreateRecipeResponse,
+} from '../_shared/recipe-schemas.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
-
-interface CreateRecipeRequest {
-  recipe: {
-    title: string;
-    description?: string;
-    category_id?: string;
-    image_url?: string;
-    prep_time?: number;
-    cook_time?: number;
-    servings?: number;
-    is_published?: boolean;
-  };
-  ingredients: Array<{
-    name: string;
-    amount?: number;
-    unit?: string;
-    sort_order?: number;
-  }>;
-  steps: Array<{
-    step_number: number;
-    description: string;
-  }>;
-}
-
-interface CreateRecipeResponse {
-  success: boolean;
-  data?: {
-    id: string;
-    title: string;
-    description: string | null;
-    image_url: string | null;
-    category_name: string | null;
-    prep_time: number | null;
-    cook_time: number | null;
-    servings: number | null;
-    created_at: string;
-  };
-  error?: string;
-  details?: {
-    field: string;
-    message: string;
-  };
-}
-
-/**
- * Validate request payload
- */
-function validateRequest(req: CreateRecipeRequest): { valid: boolean; error?: string; field?: string } {
-  // Validate recipe.title
-  if (!req.recipe.title || req.recipe.title.trim().length === 0) {
-    return { valid: false, error: 'Title is required', field: 'recipe.title' };
-  }
-  if (req.recipe.title.length > 500) {
-    return { valid: false, error: 'Title must be less than 500 characters', field: 'recipe.title' };
-  }
-
-  // Validate description length
-  if (req.recipe.description && req.recipe.description.length > 2000) {
-    return { valid: false, error: 'Description must be less than 2000 characters', field: 'recipe.description' };
-  }
-
-  // Validate ingredients
-  if (!req.ingredients || req.ingredients.length === 0) {
-    return { valid: false, error: 'At least one ingredient is required', field: 'ingredients' };
-  }
-  for (const ing of req.ingredients) {
-    if (!ing.name || ing.name.trim().length === 0) {
-      return { valid: false, error: 'Ingredient name is required', field: 'ingredients.name' };
-    }
-  }
-
-  // Validate steps
-  if (!req.steps || req.steps.length === 0) {
-    return { valid: false, error: 'At least one step is required', field: 'steps' };
-  }
-  for (const step of req.steps) {
-    if (!step.description || step.description.trim().length === 0) {
-      return { valid: false, error: 'Step description is required', field: 'steps.description' };
-    }
-  }
-
-  // Validate numeric fields if provided
-  if (req.recipe.prep_time !== undefined && req.recipe.prep_time < 0) {
-    return { valid: false, error: 'Prep time must be positive', field: 'recipe.prep_time' };
-  }
-  if (req.recipe.cook_time !== undefined && req.recipe.cook_time < 0) {
-    return { valid: false, error: 'Cook time must be positive', field: 'recipe.cook_time' };
-  }
-  if (req.recipe.servings !== undefined && req.recipe.servings < 1) {
-    return { valid: false, error: 'Servings must be at least 1', field: 'recipe.servings' };
-  }
-
-  return { valid: true };
-}
 
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
@@ -122,24 +33,18 @@ Deno.serve(async (req: Request) => {
       throw new Error('Missing environment variables');
     }
 
-    // Parse request body
+    // Parse and validate request body with Zod
     let body: CreateRecipeRequest;
     try {
-      body = await req.json();
-    } catch {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid JSON in request body' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Validate request
-    const validation = validateRequest(body);
-    if (!validation.valid) {
+      const json = await req.json();
+      body = createRecipeRequestSchema.parse(json);
+    } catch (parseError) {
+      // Handle JSON parse errors and Zod validation errors
+      const errorMessage =
+        parseError instanceof Error ? parseError.message : 'Invalid request body';
       const response: CreateRecipeResponse = {
         success: false,
-        error: validation.error,
-        details: validation.field ? { field: validation.field, message: validation.error! } : undefined,
+        error: errorMessage,
       };
       return new Response(JSON.stringify(response), {
         status: 400,
@@ -169,7 +74,7 @@ Deno.serve(async (req: Request) => {
     const recipeId = rpcData.id;
     supabase.functions
       .invoke('embed-recipe', { body: { recipe_id: recipeId } })
-      .catch((err) => {
+      .catch((err: Error) => {
         console.warn('Failed to trigger embedding:', err);
       });
 

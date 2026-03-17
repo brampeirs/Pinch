@@ -2,6 +2,7 @@ import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SupabaseService } from '../../services/supabase.service';
 import { Tables } from '../../models/database.types';
+import { getDisplayImage } from '../../utils/placeholder';
 
 // Database types
 type DbRecipe = Tables<'recipes'>;
@@ -119,6 +120,13 @@ export class RecipeDetailPage implements OnInit {
   totalTime = computed(() => {
     const r = this.recipe();
     return r ? r.prepTime + r.cookTime : 0;
+  });
+
+  /** Returns the image URL or a category-specific placeholder */
+  displayImage = computed(() => {
+    const r = this.recipe();
+    if (!r) return '/placeholders/default.svg';
+    return getDisplayImage(r.imageUrl, r.category);
   });
 
   adjustedIngredients = computed(() => {

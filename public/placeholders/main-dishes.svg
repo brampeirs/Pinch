@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <rect width="400" height="300" fill="url(#grad-main)"/>
+  <defs>
+    <linearGradient id="grad-main" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f5f5f4"/>
+      <stop offset="100%" style="stop-color:#e7e5e4"/>
+    </linearGradient>
+  </defs>
+  <!-- Plate -->
+  <g transform="translate(200, 155)">
+    <ellipse cx="0" cy="10" rx="80" ry="30" fill="#a8a29e" opacity="0.3"/>
+    <ellipse cx="0" cy="0" rx="75" ry="28" fill="#fafaf9" stroke="#a8a29e" stroke-width="3"/>
+    <ellipse cx="0" cy="0" rx="55" ry="20" fill="none" stroke="#d6d3d1" stroke-width="2"/>
+  </g>
+  <!-- Food representation -->
+  <g transform="translate(200, 145)">
+    <ellipse cx="-15" cy="0" rx="25" ry="12" fill="#78716c" opacity="0.5"/>
+    <ellipse cx="15" cy="5" rx="20" ry="10" fill="#a8a29e" opacity="0.4"/>
+  </g>
+  <!-- Utensils -->
+  <g stroke="#78716c" stroke-width="3" stroke-linecap="round">
+    <line x1="280" y1="100" x2="300" y2="200"/>
+    <line x1="100" y1="100" x2="120" y2="200"/>
+  </g>
+  <text x="200" y="270" text-anchor="middle" font-family="system-ui" font-size="14" fill="#57534e" opacity="0.5">Main Dishes</text>
+</svg>
+
