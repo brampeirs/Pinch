@@ -163,19 +163,27 @@ export class AddRecipePage implements OnInit {
     });
   }
 
-  onImageSelected(event: Event) {
+  async onImageSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
 
     if (file) {
       this.imageFile.set(file);
 
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onload = () => {
-        this.imagePreview.set(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      // Upload immediately - don't wait for save
+      this.uploadingImage.set(true);
+      const { url, error: uploadError } = await this.supabase.uploadRecipeImage(file);
+      this.uploadingImage.set(false);
+
+      if (uploadError) {
+        this.error.set('Afbeelding uploaden mislukt: ' + uploadError.message);
+        return;
+      }
+
+      if (url) {
+        this.imageUrl.set(url);
+        this.imagePreview.set(url);
+      }
     }
   }
 
@@ -308,26 +316,12 @@ export class AddRecipePage implements OnInit {
     this.saving.set(true);
     this.error.set(null);
 
-    // Upload image first if there's a file
-    let finalImageUrl = this.imageUrl();
-    if (this.imageFile()) {
-      this.uploadingImage.set(true);
-      const { url, error: uploadError } = await this.supabase.uploadRecipeImage(this.imageFile()!);
-      this.uploadingImage.set(false);
-
-      if (uploadError) {
-        this.saving.set(false);
-        this.error.set('Afbeelding uploaden mislukt: ' + uploadError.message);
-        return;
-      }
-      finalImageUrl = url || '';
-    }
-
+    // Image already uploaded, just use the URL
     const recipeData = {
       title: this.title(),
       description: this.description() || undefined,
       category_id: this.categoryId() || undefined,
-      image_url: finalImageUrl || undefined,
+      image_url: this.imageUrl() || undefined,
       prep_time: this.prepTime() ?? undefined,
       cook_time: this.cookTime() ?? undefined,
       servings: this.servings() ?? undefined,
