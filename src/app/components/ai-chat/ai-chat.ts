@@ -29,8 +29,13 @@ interface ReasoningState {
 export class AiChat {
     @ViewChild('messagesContainer') messagesContainer!: ElementRef;
     @ViewChild('textareaInput') textareaInput!: ElementRef<HTMLTextAreaElement>;
+    @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
     protected readonly viewModeService = inject(ChatViewModeService);
+
+    // Selected files for upload
+    selectedFiles = signal<FileList | null>(null);
+    filePreviews = signal<string[]>([]);
 
     // Chat instance from @ai-sdk/angular with transport configuration
     public chat = new Chat({
@@ -328,9 +333,57 @@ export class AiChat {
         textarea.style.height = `${textarea.scrollHeight}px`;
     }
 
+    // File selection handler
+    async onFilesSelected(event: Event) {
+        const input = event.target as HTMLInputElement;
+        if (!input.files || input.files.length === 0) return;
+
+        this.selectedFiles.set(input.files);
+
+        // Convert files to data URLs
+        const newPreviews = await Promise.all(
+            Array.from(input.files)
+                .filter((file) => file.type.startsWith('image/'))
+                .map(
+                    (file) =>
+                        new Promise<string>((resolve) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result as string);
+                            reader.readAsDataURL(file);
+                        }),
+                ),
+        );
+
+        // Update signal with new previews
+        this.filePreviews.set([...this.filePreviews(), ...newPreviews]);
+    }
+
+    // Remove a selected file
+    removeFile(index: number) {
+        const previews = this.filePreviews();
+        previews.splice(index, 1);
+        this.filePreviews.set([...previews]);
+
+        // Clear file input if no files left
+        if (previews.length === 0) {
+            this.selectedFiles.set(null);
+            if (this.fileInput?.nativeElement) {
+                this.fileInput.nativeElement.value = '';
+            }
+        }
+    }
+
+    // Trigger file input click
+    openFileSelector() {
+        this.fileInput?.nativeElement?.click();
+    }
+
     sendMessage() {
         const message = this.inputMessage().trim();
-        if (!message || this.isLoading) return;
+        const files = this.selectedFiles();
+
+        // Need either text or files
+        if ((!message && !files) || this.isLoading) return;
 
         this.inputMessage.set('');
         // Reset textarea height after sending
@@ -338,8 +391,22 @@ export class AiChat {
             this.textareaInput.nativeElement.style.height = 'auto';
         }
 
-        // Use the Chat sendMessage method - it handles everything
-        this.chat.sendMessage({ text: message });
+        // Send message FIRST - SDK handles the conversion of FileList to data URLs
+        // Important: FileList is a live reference, so we must send before clearing the input
+        if (message && files) {
+            this.chat.sendMessage({ text: message, files });
+        } else if (files) {
+            this.chat.sendMessage({ files });
+        } else {
+            this.chat.sendMessage({ text: message });
+        }
+
+        // Clear files state AFTER sending
+        this.selectedFiles.set(null);
+        this.filePreviews.set([]);
+        if (this.fileInput?.nativeElement) {
+            this.fileInput.nativeElement.value = '';
+        }
 
         // Keep the just-sent prompt near the top of the viewport (ChatGPT-like turn framing).
         this.alignNextResponseToTop = true;

@@ -96,13 +96,6 @@ Deno.serve(async (req: Request) => {
         const body = await req.json();
         const { messages } = body;
 
-        // Debug logging for mobile troubleshooting
-        console.log('📥 [Chat] Incoming request:', {
-            messageCount: messages?.length ?? 0,
-            lastMessage: messages?.[messages.length - 1],
-            userAgent: req.headers.get('user-agent'),
-        });
-
         const agent = getRecipeAgent();
         console.log('🤖 [Chat] Agent initialized, starting stream...');
 
