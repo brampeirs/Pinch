@@ -2,10 +2,9 @@
 // Then fill in your Supabase credentials
 
 export const environment = {
-  production: false,
-  supabase: {
-    url: 'https://your-project.supabase.co',
-    anonKey: 'your-anon-key-here',
-  },
+    production: false,
+    supabase: {
+        url: 'https://your-project.supabase.co',
+        anonKey: 'your-anon-key-here',
+    },
 };
-

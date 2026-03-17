@@ -3,163 +3,163 @@ import OpenAI from 'jsr:@openai/openai';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 interface EmbedRequest {
-  recipe_id: string;
+    recipe_id: string;
 }
 
 interface Ingredient {
-  name: string;
-  amount: number | null;
-  unit: string | null;
-  sort_order: number;
+    name: string;
+    amount: number | null;
+    unit: string | null;
+    sort_order: number;
 }
 
 interface RecipeStep {
-  step_number: number;
-  description: string;
+    step_number: number;
+    description: string;
 }
 
 interface Recipe {
-  id: string;
-  title: string;
-  description: string | null;
-  category: { name: string } | null;
-  ingredients: Ingredient[];
-  recipe_steps: RecipeStep[];
+    id: string;
+    title: string;
+    description: string | null;
+    category: { name: string } | null;
+    ingredients: Ingredient[];
+    recipe_steps: RecipeStep[];
 }
 
 /**
  * Build canonical text representation of a recipe for embedding
  */
 function buildCanonicalText(recipe: Recipe): string {
-  const parts: string[] = [];
+    const parts: string[] = [];
 
-  // Title
-  parts.push(`Title: ${recipe.title}`);
+    // Title
+    parts.push(`Title: ${recipe.title}`);
 
-  // Category
-  if (recipe.category?.name) {
-    parts.push(`Category: ${recipe.category.name}`);
-  }
+    // Category
+    if (recipe.category?.name) {
+        parts.push(`Category: ${recipe.category.name}`);
+    }
 
-  // Description
-  if (recipe.description) {
-    parts.push(`Description: ${recipe.description}`);
-  }
+    // Description
+    if (recipe.description) {
+        parts.push(`Description: ${recipe.description}`);
+    }
 
-  // Ingredients - add semantic hints for better search
-  if (recipe.ingredients.length > 0) {
-    const sortedIngredients = [...recipe.ingredients].sort((a, b) => a.sort_order - b.sort_order);
-    const ingredientLines = sortedIngredients.map((ing) => {
-      const amount = ing.amount ? `${ing.amount}` : '';
-      const unit = ing.unit || '';
-      const prefix = amount || unit ? `${amount}${unit ? ' ' + unit : ''} ` : '';
-      return `- ${prefix}${ing.name}`;
-    });
-    parts.push(`\nIngredients:\n${ingredientLines.join('\n')}`);
-  }
+    // Ingredients - add semantic hints for better search
+    if (recipe.ingredients.length > 0) {
+        const sortedIngredients = [...recipe.ingredients].sort((a, b) => a.sort_order - b.sort_order);
+        const ingredientLines = sortedIngredients.map((ing) => {
+            const amount = ing.amount ? `${ing.amount}` : '';
+            const unit = ing.unit || '';
+            const prefix = amount || unit ? `${amount}${unit ? ' ' + unit : ''} ` : '';
+            return `- ${prefix}${ing.name}`;
+        });
+        parts.push(`\nIngredients:\n${ingredientLines.join('\n')}`);
+    }
 
-  // Steps
-  if (recipe.recipe_steps.length > 0) {
-    const sortedSteps = [...recipe.recipe_steps].sort((a, b) => a.step_number - b.step_number);
-    const stepLines = sortedSteps.map((step) => `${step.step_number}. ${step.description}`);
-    parts.push(`\nPreparation:\n${stepLines.join('\n')}`);
-  }
+    // Steps
+    if (recipe.recipe_steps.length > 0) {
+        const sortedSteps = [...recipe.recipe_steps].sort((a, b) => a.step_number - b.step_number);
+        const stepLines = sortedSteps.map((step) => `${step.step_number}. ${step.description}`);
+        parts.push(`\nPreparation:\n${stepLines.join('\n')}`);
+    }
 
-  return parts.join('\n');
+    return parts.join('\n');
 }
 
 Deno.serve(async (req: Request) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
-
-  try {
-    const openaiKey = Deno.env.get('OPENAI_API_KEY');
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    if (!openaiKey || !supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing environment variables');
+    // Handle CORS preflight
+    if (req.method === 'OPTIONS') {
+        return new Response(null, { status: 204, headers: corsHeaders });
     }
 
-    const { recipe_id }: EmbedRequest = await req.json();
+    try {
+        const openaiKey = Deno.env.get('OPENAI_API_KEY');
+        const supabaseUrl = Deno.env.get('SUPABASE_URL');
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!recipe_id) {
-      throw new Error('Missing recipe_id parameter');
-    }
+        if (!openaiKey || !supabaseUrl || !supabaseServiceKey) {
+            throw new Error('Missing environment variables');
+        }
 
-    // Initialize clients
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const openai = new OpenAI({ apiKey: openaiKey });
+        const { recipe_id }: EmbedRequest = await req.json();
 
-    // Fetch recipe with all details
-    const { data: recipe, error: fetchError } = await supabase
-      .from('recipes')
-      .select(
-        `
+        if (!recipe_id) {
+            throw new Error('Missing recipe_id parameter');
+        }
+
+        // Initialize clients
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        const openai = new OpenAI({ apiKey: openaiKey });
+
+        // Fetch recipe with all details
+        const { data: recipe, error: fetchError } = await supabase
+            .from('recipes')
+            .select(
+                `
         id,
         title,
         description,
         category:categories(name),
         ingredients(*),
         recipe_steps(*)
-      `
-      )
-      .eq('id', recipe_id)
-      .single();
+      `,
+            )
+            .eq('id', recipe_id)
+            .single();
 
-    if (fetchError || !recipe) {
-      throw new Error(`Recipe not found: ${fetchError?.message || 'Unknown error'}`);
+        if (fetchError || !recipe) {
+            throw new Error(`Recipe not found: ${fetchError?.message || 'Unknown error'}`);
+        }
+
+        // Build canonical text
+        const content = buildCanonicalText(recipe as Recipe);
+
+        // Generate embedding
+        const embeddingResponse = await openai.embeddings.create({
+            model: 'text-embedding-3-small',
+            input: content,
+        });
+
+        const embedding = embeddingResponse.data[0].embedding;
+        const tokens = embeddingResponse.usage.total_tokens;
+
+        // Upsert into recipe_embeddings
+        // Note: pgvector expects the embedding as a string in format "[0.1,0.2,...]"
+        const embeddingString = `[${embedding.join(',')}]`;
+
+        const { error: upsertError } = await supabase.from('recipe_embeddings').upsert(
+            {
+                recipe_id,
+                content,
+                embedding: embeddingString,
+                model: 'text-embedding-3-small',
+                tokens,
+                updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'recipe_id' },
+        );
+
+        if (upsertError) {
+            throw new Error(`Failed to save embedding: ${upsertError.message}`);
+        }
+
+        return new Response(JSON.stringify({ success: true, recipe_id, tokens }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        return new Response(JSON.stringify({ error: message }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
     }
-
-    // Build canonical text
-    const content = buildCanonicalText(recipe as Recipe);
-
-    // Generate embedding
-    const embeddingResponse = await openai.embeddings.create({
-      model: 'text-embedding-3-small',
-      input: content,
-    });
-
-    const embedding = embeddingResponse.data[0].embedding;
-    const tokens = embeddingResponse.usage.total_tokens;
-
-    // Upsert into recipe_embeddings
-    // Note: pgvector expects the embedding as a string in format "[0.1,0.2,...]"
-    const embeddingString = `[${embedding.join(',')}]`;
-
-    const { error: upsertError } = await supabase.from('recipe_embeddings').upsert(
-      {
-        recipe_id,
-        content,
-        embedding: embeddingString,
-        model: 'text-embedding-3-small',
-        tokens,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'recipe_id' }
-    );
-
-    if (upsertError) {
-      throw new Error(`Failed to save embedding: ${upsertError.message}`);
-    }
-
-    return new Response(JSON.stringify({ success: true, recipe_id, tokens }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: message }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
 });

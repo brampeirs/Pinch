@@ -37,6 +37,7 @@ RPC Function (create_recipe):
 ### Component Breakdown
 
 **1. Edge Function: `supabase/functions/create-recipe/index.ts`**
+
 - Validates incoming request
 - Orchestrates the creation flow
 - Calls RPC function for DB operations
@@ -44,12 +45,14 @@ RPC Function (create_recipe):
 - Returns structured response
 
 **2. RPC Function: `create_recipe(recipe_data, ingredients_data, steps_data)`**
+
 - PostgreSQL function (PL/pgSQL)
 - Atomic transaction for all inserts
 - Returns JSONB with recipe + category join
 - Handles validation at DB level (constraints)
 
 **3. Client Integration**
+
 - `uploadRecipeImage()` - Called immediately on image selection
 - `createRecipe()` - Updated to call edge function instead of direct inserts
 
@@ -59,25 +62,25 @@ RPC Function (create_recipe):
 
 ```typescript
 interface CreateRecipeRequest {
-  recipe: {
-    title: string;
-    description?: string;
-    category_id?: string;
-    image_url?: string;        // Already uploaded to storage
-    prep_time?: number;
-    cook_time?: number;
-    servings?: number;
-  };
-  ingredients: Array<{
-    name: string;
-    amount?: number;
-    unit?: string;
-    sort_order?: number;
-  }>;
-  steps: Array<{
-    step_number: number;
-    description: string;
-  }>;
+    recipe: {
+        title: string;
+        description?: string;
+        category_id?: string;
+        image_url?: string; // Already uploaded to storage
+        prep_time?: number;
+        cook_time?: number;
+        servings?: number;
+    };
+    ingredients: Array<{
+        name: string;
+        amount?: number;
+        unit?: string;
+        sort_order?: number;
+    }>;
+    steps: Array<{
+        step_number: number;
+        description: string;
+    }>;
 }
 ```
 
@@ -85,23 +88,23 @@ interface CreateRecipeRequest {
 
 ```typescript
 interface CreateRecipeResponse {
-  success: boolean;
-  data?: {
-    id: string;
-    title: string;
-    description: string | null;
-    image_url: string | null;
-    category_name: string | null;
-    prep_time: number | null;
-    cook_time: number | null;
-    servings: number | null;
-    created_at: string;
-  };
-  error?: string;
-  details?: {
-    field: string;
-    message: string;
-  };
+    success: boolean;
+    data?: {
+        id: string;
+        title: string;
+        description: string | null;
+        image_url: string | null;
+        category_name: string | null;
+        prep_time: number | null;
+        cook_time: number | null;
+        servings: number | null;
+        created_at: string;
+    };
+    error?: string;
+    details?: {
+        field: string;
+        message: string;
+    };
 }
 ```
 
@@ -138,17 +141,18 @@ Optional fields:
 
 ### Error Scenarios
 
-| Scenario | Status | Handling |
-|----------|--------|----------|
-| Missing required fields | 400 | Return validation error with details |
-| RPC transaction fails | 500 | Return error, image stays orphaned |
-| Embedding fails | - | Log warning, don't block creation |
-| Invalid category_id | 400 | RPC foreign key constraint fails |
-| No authentication | - | Allow for now (auth added later) |
+| Scenario                | Status | Handling                             |
+| ----------------------- | ------ | ------------------------------------ |
+| Missing required fields | 400    | Return validation error with details |
+| RPC transaction fails   | 500    | Return error, image stays orphaned   |
+| Embedding fails         | -      | Log warning, don't block creation    |
+| Invalid category_id     | 400    | RPC foreign key constraint fails     |
+| No authentication       | -      | Allow for now (auth added later)     |
 
 ### Transaction Rollback
 
 The RPC function uses a PostgreSQL transaction:
+
 ```sql
 BEGIN;
   INSERT INTO recipes ... RETURNING id;
@@ -164,11 +168,13 @@ If any insert fails, the entire transaction rolls back automatically.
 **Accepted limitation:** Images uploaded but not saved in recipes will remain in storage.
 
 **Rationale:**
+
 - User aborts between upload and save
 - Recipe creation fails after image upload
 - User uploads multiple images, uses only one
 
 **Cleanup strategy (future):**
+
 - Cron job finds images in storage not referenced in recipes table
 - Only delete if created > 24 hours ago
 - Out of scope for this implementation
@@ -270,6 +276,7 @@ async createRecipe(
 **Decision:** Upload image immediately on selection, before save.
 
 **Rationale:**
+
 - Better UX - instant feedback, progress indication
 - Smaller edge function payload (URL vs base64)
 - Consistent flow for Angular and Chat clients
@@ -282,6 +289,7 @@ async createRecipe(
 **Decision:** Use RPC function for database operations.
 
 **Rationale:**
+
 - Atomic transaction - PostgreSQL native guarantees
 - Reusable from multiple edge functions
 - Clear separation: edge function = orchestration, RPC = data
@@ -294,6 +302,7 @@ async createRecipe(
 **Decision:** Fire-and-forget, don't block recipe creation.
 
 **Rationale:**
+
 - Embedding can take 1-3 seconds
 - Not critical for recipe creation success
 - User gets immediate feedback
@@ -306,6 +315,7 @@ async createRecipe(
 **Decision:** Deploy edge function without JWT verification.
 
 **Rationale:**
+
 - Discovery phase - auth not implemented yet
 - Will add later when user system is ready
 - Edge function prepared for auth (can add check easily)
@@ -317,6 +327,7 @@ async createRecipe(
 **Decision:** Skip unit/integration tests initially.
 
 **Rationale:**
+
 - Discovery phase - iterating quickly
 - Manual testing sufficient for validation
 - Will add tests when design stabilizes
@@ -328,32 +339,32 @@ async createRecipe(
 **Out of scope for this implementation:**
 
 1. **Orphaned Image Cleanup**
-   - Cron job to find unused images in storage
-   - Delete images not in recipes table after 24h
+    - Cron job to find unused images in storage
+    - Delete images not in recipes table after 24h
 
 2. **Authentication**
-   - JWT verification in edge function
-   - User ID from auth context
-   - RLS policies for recipe ownership
+    - JWT verification in edge function
+    - User ID from auth context
+    - RLS policies for recipe ownership
 
 3. **Rate Limiting**
-   - Prevent abuse (e.g., spam recipe creation)
-   - IP-based or user-based limits
+    - Prevent abuse (e.g., spam recipe creation)
+    - IP-based or user-based limits
 
 4. **Image Processing**
-   - Resize/compress on upload
-   - Generate multiple sizes (thumbnail, medium, full)
-   - Supabase Image Transformation API or custom edge function
+    - Resize/compress on upload
+    - Generate multiple sizes (thumbnail, medium, full)
+    - Supabase Image Transformation API or custom edge function
 
 5. **Validation Improvements**
-   - Duplicate detection (similar titles)
-   - Category existence check before RPC call
-   - Image URL validation (ensure from our storage)
+    - Duplicate detection (similar titles)
+    - Category existence check before RPC call
+    - Image URL validation (ensure from our storage)
 
 6. **Tests**
-   - Unit tests for RPC function
-   - Integration tests for edge function
-   - E2E tests for client flow
+    - Unit tests for RPC function
+    - Integration tests for edge function
+    - E2E tests for client flow
 
 ## Implementation Checklist
 

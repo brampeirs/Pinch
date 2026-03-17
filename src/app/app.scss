@@ -3,7 +3,7 @@
 // The header stays full width
 
 :host {
-  display: block;
+    display: block;
 }
 
 // Sidebar width constant - should match ai-chat component
@@ -11,10 +11,10 @@ $chat-sidebar-width: 440px;
 
 // Main content area - this is what gets pushed, not the header
 .main-content {
-  transition: padding-right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: padding-right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 // When sidebar is active, only push the main content
 :host.chat-sidebar-active .main-content {
-  padding-right: $chat-sidebar-width;
+    padding-right: $chat-sidebar-width;
 }

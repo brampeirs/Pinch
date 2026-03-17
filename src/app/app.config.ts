@@ -5,15 +5,15 @@ import { provideMarkdown, MARKED_OPTIONS } from 'ngx-markdown';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
-  providers: [
-    provideBrowserGlobalErrorListeners(),
-    provideRouter(
-      routes,
-      withInMemoryScrolling({
-        scrollPositionRestoration: 'enabled',
-        anchorScrolling: 'enabled',
-      })
-    ),
-    provideMarkdown(),
-  ],
+    providers: [
+        provideBrowserGlobalErrorListeners(),
+        provideRouter(
+            routes,
+            withInMemoryScrolling({
+                scrollPositionRestoration: 'enabled',
+                anchorScrolling: 'enabled',
+            }),
+        ),
+        provideMarkdown(),
+    ],
 };

@@ -10,28 +10,28 @@
 
 // Tailwind theme extensions via CSS
 @theme {
-  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-geist: 'Geist', 'Geist Fallback', system-ui, sans-serif;
+    --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --font-geist: 'Geist', 'Geist Fallback', system-ui, sans-serif;
 
-  // shadcn/ui semantic colors
-  --color-background: #ffffff;
-  --color-foreground: #0a0a0a;
-  --color-card: #ffffff;
-  --color-card-foreground: #0a0a0a;
-  --color-muted: #f4f4f5;
-  --color-muted-foreground: #71717a;
-  --color-accent: #f4f4f5;
-  --color-accent-foreground: #0a0a0a;
-  --color-border: #e4e4e7;
-  --color-input: #e4e4e7;
-  --color-ring: #18181b;
-  --color-primary: #18181b;
-  --color-primary-foreground: #fafafa;
-  --color-destructive: #ef4444;
+    // shadcn/ui semantic colors
+    --color-background: #ffffff;
+    --color-foreground: #0a0a0a;
+    --color-card: #ffffff;
+    --color-card-foreground: #0a0a0a;
+    --color-muted: #f4f4f5;
+    --color-muted-foreground: #71717a;
+    --color-accent: #f4f4f5;
+    --color-accent-foreground: #0a0a0a;
+    --color-border: #e4e4e7;
+    --color-input: #e4e4e7;
+    --color-ring: #18181b;
+    --color-primary: #18181b;
+    --color-primary-foreground: #fafafa;
+    --color-destructive: #ef4444;
 }
 
 // Global button cursor fix
 button,
 [role='button'] {
-  cursor: pointer;
+    cursor: pointer;
 }
