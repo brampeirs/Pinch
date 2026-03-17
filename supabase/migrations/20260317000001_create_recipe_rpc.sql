@@ -12,6 +12,7 @@ CREATE OR REPLACE FUNCTION create_recipe(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_recipe_id uuid;
@@ -33,6 +34,8 @@ BEGIN
   END IF;
 
   -- Insert recipe
+  -- Note: user_id intentionally omitted - anonymous recipe creation is allowed
+  -- Auth context to be added in future enhancement
   INSERT INTO recipes (
     title,
     description,
