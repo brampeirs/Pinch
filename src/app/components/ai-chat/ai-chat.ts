@@ -1,5 +1,4 @@
-import { Component, signal, ElementRef, ViewChild, effect, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, signal, ElementRef, ViewChild, effect, inject, HostListener } from '@angular/core';
 import { Chat } from '@ai-sdk/angular';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import { MarkdownComponent } from 'ngx-markdown';
@@ -7,6 +6,9 @@ import { environment } from '../../../environments/environment';
 import { ChatViewModeService } from '../../services/chat-view-mode.service';
 import { ChatModeToggle } from './chat-mode-toggle/chat-mode-toggle';
 import { ChatRecipeCard, ChatRecipe } from './chat-recipe-card/chat-recipe-card';
+
+// Mobile breakpoint (matches Tailwind's 'md')
+const MOBILE_BREAKPOINT = 768;
 
 // Re-export for backward compatibility
 export type RecipeResult = ChatRecipe;
@@ -22,7 +24,7 @@ interface ReasoningState {
     selector: 'app-ai-chat',
     templateUrl: './ai-chat.html',
     styleUrl: './ai-chat.scss',
-    imports: [RouterLink, MarkdownComponent, ChatModeToggle, ChatRecipeCard],
+    imports: [MarkdownComponent, ChatModeToggle, ChatRecipeCard],
 })
 export class AiChat {
     @ViewChild('messagesContainer') messagesContainer!: ElementRef;
@@ -58,6 +60,9 @@ export class AiChat {
     autoScrollEnabled = signal(true);
     showJumpToLatest = signal(false);
 
+    // Mobile detection
+    isMobile = signal(typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT);
+
     private readonly bottomSnapThreshold = 72;
     private alignNextResponseToTop = false;
     private latestUserMessageId: string | null = null;
@@ -65,6 +70,11 @@ export class AiChat {
     // Track reasoning open/close state per message
     private reasoningStates = new Map<string, ReasoningState>();
     private previousReasoningStreaming = new Map<string, boolean>();
+
+    @HostListener('window:resize')
+    onResize() {
+        this.isMobile.set(window.innerWidth < MOBILE_BREAKPOINT);
+    }
 
     constructor() {
         // Auto-scroll only when user is near the bottom or when we intentionally align a new turn.

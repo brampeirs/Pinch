@@ -28,8 +28,9 @@
 @if (isOpen()) {
     <div
         class="chat-window fixed z-50 flex flex-col overflow-hidden border border-border bg-background"
-        [class.chat-floating]="viewModeService.isFloating()"
-        [class.chat-sidebar]="viewModeService.isSidebar()"
+        [class.chat-mobile]="isMobile()"
+        [class.chat-floating]="!isMobile() && viewModeService.isFloating()"
+        [class.chat-sidebar]="!isMobile() && viewModeService.isSidebar()"
     >
         <!-- Header - minimal, no border to match main header flow -->
         <div class="chat-header flex items-center justify-between px-4 py-3">
@@ -38,8 +39,10 @@
                 <span class="text-sm font-medium text-foreground">Cooking Assistant</span>
             </div>
             <div class="flex items-center gap-1">
-                <!-- Mode toggle button -->
-                <app-chat-mode-toggle />
+                <!-- Mode toggle button - hidden on mobile -->
+                @if (!isMobile()) {
+                    <app-chat-mode-toggle />
+                }
                 <!-- Close button -->
                 <button
                     (click)="toggleChat()"
