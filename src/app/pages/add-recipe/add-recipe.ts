@@ -168,6 +168,13 @@ export class AddRecipePage implements OnInit {
     const file = input.files?.[0];
 
     if (file) {
+      this.error.set(null); // Clear previous errors
+
+      // Prevent multiple simultaneous uploads
+      if (this.uploadingImage()) {
+        return;
+      }
+
       this.imageFile.set(file);
 
       // Upload immediately - don't wait for save
@@ -177,12 +184,16 @@ export class AddRecipePage implements OnInit {
 
       if (uploadError) {
         this.error.set('Afbeelding uploaden mislukt: ' + uploadError.message);
+        this.imageFile.set(null);
+        // Reset the file input element
+        (event.target as HTMLInputElement).value = '';
         return;
       }
 
       if (url) {
         this.imageUrl.set(url);
         this.imagePreview.set(url);
+        this.imageFile.set(null); // Clear file reference after upload
       }
     }
   }
