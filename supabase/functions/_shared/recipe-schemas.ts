@@ -13,6 +13,7 @@ export const ingredientSchema = z.object({
     amount: z.number().optional(),
     unit: z.string().optional(),
     sort_order: z.number().optional(),
+    section_name: z.string().optional(), // e.g., "De Saus", "Het Deeg"
 });
 
 /**
@@ -21,6 +22,7 @@ export const ingredientSchema = z.object({
 export const stepSchema = z.object({
     step_number: z.number(),
     description: z.string().min(1, 'Step description is required'),
+    section_name: z.string().optional(), // e.g., "Voorbereiding", "De Saus"
 });
 
 /**
@@ -76,6 +78,10 @@ export const createRecipeToolInputSchema = z.object({
                 amount: z.number().optional().describe('Quantity amount, e.g. 2, 0.5'),
                 unit: z.string().optional().describe('Unit of measurement, e.g. "cups", "tbsp", "g"'),
                 sort_order: z.number().optional().describe('Order in the list (auto-assigned if not provided)'),
+                section_name: z
+                    .string()
+                    .optional()
+                    .describe('Section name for grouping, e.g. "De Saus", "Het Deeg". Use for complex recipes.'),
             }),
         )
         .min(1)
@@ -85,6 +91,10 @@ export const createRecipeToolInputSchema = z.object({
             stepSchema.extend({
                 step_number: z.number().describe('Step number (1, 2, 3, ...)'),
                 description: z.string().describe('Detailed instruction for this step'),
+                section_name: z
+                    .string()
+                    .optional()
+                    .describe('Section name for grouping, e.g. "Voorbereiding", "De Saus". Use for complex recipes.'),
             }),
         )
         .min(1)

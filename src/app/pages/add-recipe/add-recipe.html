@@ -233,49 +233,60 @@
 
                 <div class="space-y-3">
                     @for (ingredient of ingredients(); track $index; let i = $index) {
-                        <div class="flex items-center gap-3">
-                            <input
-                                type="number"
-                                [ngModel]="ingredient.amount"
-                                (ngModelChange)="updateIngredient(i, 'amount', $event)"
-                                [name]="'ing-amount-' + i"
-                                placeholder="Amount"
-                                min="0"
-                                step="0.1"
-                                class="w-20 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
-                            />
-                            <input
-                                type="text"
-                                [ngModel]="ingredient.unit"
-                                (ngModelChange)="updateIngredient(i, 'unit', $event)"
-                                [name]="'ing-unit-' + i"
-                                placeholder="Unit"
-                                class="w-24 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
-                            />
-                            <input
-                                type="text"
-                                [ngModel]="ingredient.name"
-                                (ngModelChange)="updateIngredient(i, 'name', $event)"
-                                [name]="'ing-name-' + i"
-                                placeholder="Ingredient (e.g. pasta)"
-                                class="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
-                            />
-                            @if (ingredients().length > 1) {
-                                <button
-                                    type="button"
-                                    (click)="removeIngredient(i)"
-                                    class="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500"
-                                >
-                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M6 18L18 6M6 6l12 12"
-                                        />
-                                    </svg>
-                                </button>
+                        <div class="space-y-1">
+                            @if (ingredient.section_name) {
+                                @if (i === 0 || ingredients()[i - 1].section_name !== ingredient.section_name) {
+                                    <div
+                                        class="mb-2 mt-3 text-xs font-semibold uppercase tracking-wide text-indigo-600"
+                                    >
+                                        {{ ingredient.section_name }}
+                                    </div>
+                                }
                             }
+                            <div class="flex items-center gap-3">
+                                <input
+                                    type="number"
+                                    [ngModel]="ingredient.amount"
+                                    (ngModelChange)="updateIngredient(i, 'amount', $event)"
+                                    [name]="'ing-amount-' + i"
+                                    placeholder="Amount"
+                                    min="0"
+                                    step="0.1"
+                                    class="w-20 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
+                                />
+                                <input
+                                    type="text"
+                                    [ngModel]="ingredient.unit"
+                                    (ngModelChange)="updateIngredient(i, 'unit', $event)"
+                                    [name]="'ing-unit-' + i"
+                                    placeholder="Unit"
+                                    class="w-24 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
+                                />
+                                <input
+                                    type="text"
+                                    [ngModel]="ingredient.name"
+                                    (ngModelChange)="updateIngredient(i, 'name', $event)"
+                                    [name]="'ing-name-' + i"
+                                    placeholder="Ingredient (e.g. pasta)"
+                                    class="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
+                                />
+                                @if (ingredients().length > 1) {
+                                    <button
+                                        type="button"
+                                        (click)="removeIngredient(i)"
+                                        class="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500"
+                                    >
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M6 18L18 6M6 6l12 12"
+                                            />
+                                        </svg>
+                                    </button>
+                                }
+                            </div>
                         </div>
                     }
                 </div>
@@ -346,36 +357,47 @@
 
                 <div class="space-y-3">
                     @for (step of steps(); track $index; let i = $index) {
-                        <div class="flex items-start gap-3">
-                            <span
-                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-600"
-                            >
-                                {{ i + 1 }}
-                            </span>
-                            <textarea
-                                [ngModel]="step.description"
-                                (ngModelChange)="updateStep(i, $event)"
-                                [name]="'step-' + i"
-                                rows="2"
-                                placeholder="Describe this step..."
-                                class="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
-                            ></textarea>
-                            @if (steps().length > 1) {
-                                <button
-                                    type="button"
-                                    (click)="removeStep(i)"
-                                    class="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500"
-                                >
-                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M6 18L18 6M6 6l12 12"
-                                        />
-                                    </svg>
-                                </button>
+                        <div class="space-y-1">
+                            @if (step.section_name) {
+                                @if (i === 0 || steps()[i - 1].section_name !== step.section_name) {
+                                    <div
+                                        class="mb-2 mt-3 text-xs font-semibold uppercase tracking-wide text-indigo-600"
+                                    >
+                                        {{ step.section_name }}
+                                    </div>
+                                }
                             }
+                            <div class="flex items-start gap-3">
+                                <span
+                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-600"
+                                >
+                                    {{ i + 1 }}
+                                </span>
+                                <textarea
+                                    [ngModel]="step.description"
+                                    (ngModelChange)="updateStep(i, $event)"
+                                    [name]="'step-' + i"
+                                    rows="2"
+                                    placeholder="Describe this step..."
+                                    class="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
+                                ></textarea>
+                                @if (steps().length > 1) {
+                                    <button
+                                        type="button"
+                                        (click)="removeStep(i)"
+                                        class="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500"
+                                    >
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M6 18L18 6M6 6l12 12"
+                                            />
+                                        </svg>
+                                    </button>
+                                }
+                            </div>
                         </div>
                     }
                 </div>

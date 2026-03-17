@@ -157,8 +157,8 @@ export class SupabaseService {
             servings?: number;
             is_published?: boolean;
         },
-        ingredients: { name: string; amount?: number; unit?: string; sort_order?: number }[],
-        steps: { step_number: number; description: string }[],
+        ingredients: { name: string; amount?: number; unit?: string; sort_order?: number; section_name?: string }[],
+        steps: { step_number: number; description: string; section_name?: string }[],
     ) {
         // Call edge function instead of direct DB operations
         const { data, error } = await this.supabase.functions.invoke<CreateRecipeEdgeFunctionResponse>(
@@ -199,8 +199,14 @@ export class SupabaseService {
             servings?: number;
             is_published?: boolean;
         },
-        ingredients: { name: string; amount?: number; unit?: string; sort_order?: number }[],
-        steps: { step_number: number; description: string }[],
+        ingredients: {
+            name: string;
+            amount?: number;
+            unit?: string;
+            sort_order?: number;
+            section_name?: string | null;
+        }[],
+        steps: { step_number: number; description: string; section_name?: string | null }[],
     ) {
         // Update the recipe
         const { data: recipeData, error: recipeError } = await this.supabase
@@ -234,6 +240,7 @@ export class SupabaseService {
                 amount: ing.amount,
                 unit: ing.unit,
                 sort_order: ing.sort_order ?? index,
+                section_name: ing.section_name || null,
             }));
 
             const { error: ingredientsError } = await this.supabase.from('ingredients').insert(ingredientsToInsert);
@@ -251,6 +258,7 @@ export class SupabaseService {
                 recipe_id: recipeId,
                 step_number: step.step_number,
                 description: step.description,
+                section_name: step.section_name || null,
             }));
 
             const { error: stepsError } = await this.supabase.from('recipe_steps').insert(stepsToInsert);

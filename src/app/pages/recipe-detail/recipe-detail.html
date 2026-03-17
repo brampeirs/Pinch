@@ -153,20 +153,31 @@
                     <div class="sticky top-24 rounded-2xl bg-slate-50 p-6">
                         <h2 class="mb-6 text-lg font-bold text-slate-900">Ingredients</h2>
 
-                        <ul class="mb-6 space-y-3">
-                            @for (ingredient of adjustedIngredients(); track ingredient.name) {
-                                <li
-                                    class="flex items-center justify-between border-b border-slate-200 pb-3 last:border-0"
-                                >
-                                    <span class="text-slate-700">{{ ingredient.name }}</span>
-                                    <span class="text-sm font-medium text-slate-900">
-                                        {{ ingredient.amount }} {{ ingredient.unit }}
-                                    </span>
-                                </li>
+                        <div class="mb-6 space-y-4">
+                            @for (section of adjustedIngredientSections(); track section.name) {
+                                <div>
+                                    @if (section.name) {
+                                        <h3 class="mb-2 text-sm font-semibold uppercase tracking-wide text-indigo-600">
+                                            {{ section.name }}
+                                        </h3>
+                                    }
+                                    <ul class="space-y-3">
+                                        @for (ingredient of section.ingredients; track ingredient.name) {
+                                            <li
+                                                class="flex items-center justify-between border-b border-slate-200 pb-3 last:border-0"
+                                            >
+                                                <span class="text-slate-700">{{ ingredient.name }}</span>
+                                                <span class="text-sm font-medium text-slate-900">
+                                                    {{ ingredient.amount }} {{ ingredient.unit }}
+                                                </span>
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
                             } @empty {
-                                <li class="text-slate-500">No ingredients found.</li>
+                                <p class="text-slate-500">No ingredients found.</p>
                             }
-                        </ul>
+                        </div>
 
                         <!-- Servings control -->
                         <div class="flex items-center justify-between rounded-xl bg-white p-3 ring-1 ring-slate-200">
@@ -199,22 +210,33 @@
 
                     <h2 class="mb-6 text-lg font-bold text-slate-900">Instructions</h2>
 
-                    <ol class="space-y-6">
-                        @for (step of recipe()!.steps; track step.step) {
-                            <li class="flex gap-4">
-                                <span
-                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white"
-                                >
-                                    {{ step.step }}
-                                </span>
-                                <p class="pt-1 leading-relaxed text-slate-700">
-                                    {{ step.description }}
-                                </p>
-                            </li>
+                    <div class="space-y-8">
+                        @for (section of recipe()!.stepSections; track section.name) {
+                            <div>
+                                @if (section.name) {
+                                    <h3 class="mb-4 text-base font-semibold uppercase tracking-wide text-indigo-600">
+                                        {{ section.name }}
+                                    </h3>
+                                }
+                                <ol class="space-y-6">
+                                    @for (step of section.steps; track step.step) {
+                                        <li class="flex gap-4">
+                                            <span
+                                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white"
+                                            >
+                                                {{ step.step }}
+                                            </span>
+                                            <p class="pt-1 leading-relaxed text-slate-700">
+                                                {{ step.description }}
+                                            </p>
+                                        </li>
+                                    }
+                                </ol>
+                            </div>
                         } @empty {
-                            <li class="text-slate-500">No preparation steps found.</li>
+                            <p class="text-slate-500">No preparation steps found.</p>
                         }
-                    </ol>
+                    </div>
                 </article>
             </div>
         </div>

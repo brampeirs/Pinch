@@ -14,6 +14,7 @@ const IngredientSchema = z.object({
     name: z.string(),
     amount: z.number().nullable(),
     unit: z.string(),
+    section_name: z.string().nullable(), // e.g., "De Saus", "Het Deeg"
 });
 
 const IngredientsResponseSchema = z.object({
@@ -22,6 +23,7 @@ const IngredientsResponseSchema = z.object({
 
 const StepSchema = z.object({
     description: z.string(),
+    section_name: z.string().nullable(), // e.g., "Voorbereiding", "De Saus"
 });
 
 const StepsResponseSchema = z.object({
@@ -38,14 +40,35 @@ interface ParseRequest {
 }
 
 const INGREDIENTS_PROMPT = `Je bent een assistent die ingrediënten uit tekst extraheert.
-Voorbeelden:
-"500g pasta" → name: "pasta", amount: 500, unit: "g"
-"2 eieren" → name: "eieren", amount: 2, unit: "stuks"
-"zout naar smaak" → name: "zout", amount: null, unit: ""
-"1 el olijfolie" → name: "olijfolie", amount: 1, unit: "el"`;
+
+**Secties detecteren:**
+Als de tekst kopjes heeft zoals "Voor de saus:", "Het deeg:", "De orzotto:" etc.,
+gebruik dan dat kopje als section_name voor alle ingrediënten eronder.
+Als er geen secties zijn, zet section_name op null.
+
+**Voorbeelden:**
+"500g pasta" → name: "pasta", amount: 500, unit: "g", section_name: null
+"2 eieren" → name: "eieren", amount: 2, unit: "stuks", section_name: null
+"zout naar smaak" → name: "zout", amount: null, unit: "", section_name: null
+
+**Met secties:**
+"VOOR DE SAUS:
+100ml room
+50g boter"
+→ [
+  { name: "room", amount: 100, unit: "ml", section_name: "Voor de saus" },
+  { name: "boter", amount: 50, unit: "g", section_name: "Voor de saus" }
+]`;
 
 const STEPS_PROMPT = `Je bent een assistent die bereidingsstappen uit tekst extraheert.
-Splits de tekst in logische stappen. Elke stap moet een duidelijke actie beschrijven.`;
+Splits de tekst in logische stappen. Elke stap moet een duidelijke actie beschrijven.
+
+**Secties detecteren:**
+Als de tekst kopjes heeft zoals "De saus:", "Afwerking:", "Het broodkruim:" etc.,
+gebruik dan dat kopje als section_name voor alle stappen eronder.
+Als er geen secties zijn, zet section_name op null.
+
+**Normaliseer sectienamen:** Gebruik title case (eerste letter hoofdletter).`;
 
 Deno.serve(async (req: Request) => {
     // Handle CORS preflight

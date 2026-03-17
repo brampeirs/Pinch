@@ -79,6 +79,7 @@ export type Database = {
                     recipe_id: string;
                     sort_order: number | null;
                     unit: string | null;
+                    section_name: string | null;
                 };
                 Insert: {
                     amount?: number | null;
@@ -87,6 +88,7 @@ export type Database = {
                     recipe_id: string;
                     sort_order?: number | null;
                     unit?: string | null;
+                    section_name?: string | null;
                 };
                 Update: {
                     amount?: number | null;
@@ -95,6 +97,7 @@ export type Database = {
                     recipe_id?: string;
                     sort_order?: number | null;
                     unit?: string | null;
+                    section_name?: string | null;
                 };
                 Relationships: [
                     {
@@ -155,6 +158,7 @@ export type Database = {
                     image_url: string | null;
                     recipe_id: string;
                     step_number: number;
+                    section_name: string | null;
                 };
                 Insert: {
                     description: string;
@@ -162,6 +166,7 @@ export type Database = {
                     image_url?: string | null;
                     recipe_id: string;
                     step_number: number;
+                    section_name?: string | null;
                 };
                 Update: {
                     description?: string;
@@ -169,6 +174,7 @@ export type Database = {
                     image_url?: string | null;
                     recipe_id?: string;
                     step_number?: number;
+                    section_name?: string | null;
                 };
                 Relationships: [
                     {

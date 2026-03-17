@@ -41,6 +41,7 @@ export interface Ingredient {
     unit: string;
     name: string;
     sort_order: number;
+    section_name: string | null;
 }
 
 export interface RecipeStep {
@@ -49,6 +50,7 @@ export interface RecipeStep {
     step_number: number;
     description: string;
     image_url: string | null;
+    section_name: string | null;
 }
 
 export interface Favorite {

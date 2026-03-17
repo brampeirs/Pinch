@@ -22,11 +22,24 @@ interface Ingredient {
     amount: number;
     unit: string;
     name: string;
+    sectionName: string | null;
 }
 
 interface RecipeStep {
     step: number;
     description: string;
+    sectionName: string | null;
+}
+
+// Grouped by section for display
+interface IngredientSection {
+    name: string | null; // null = no section header
+    ingredients: Ingredient[];
+}
+
+interface StepSection {
+    name: string | null;
+    steps: RecipeStep[];
 }
 
 interface RecipeDetail {
@@ -40,6 +53,8 @@ interface RecipeDetail {
     servings: number;
     ingredients: Ingredient[];
     steps: RecipeStep[];
+    ingredientSections: IngredientSection[];
+    stepSections: StepSection[];
 }
 
 @Component({
@@ -82,6 +97,39 @@ export class RecipeDetailPage implements OnInit {
 
             const recipeData = data as RecipeWithDetails;
 
+            // Map ingredients with section info
+            const ingredients: Ingredient[] = (recipeData.ingredients || [])
+                .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+                .map((ing) => ({
+                    amount: Number(ing.amount) || 0,
+                    unit: ing.unit || '',
+                    name: ing.name,
+                    sectionName: ing.section_name,
+                }));
+
+            // Map steps with section info
+            const steps: RecipeStep[] = (recipeData.recipe_steps || [])
+                .sort((a, b) => (a.step_number || 0) - (b.step_number || 0))
+                .map((step) => ({
+                    step: step.step_number || 0,
+                    description: step.description,
+                    sectionName: step.section_name,
+                }));
+
+            // Group ingredients by section (preserving order)
+            const ingredientSections: IngredientSection[] = this.groupBySection(ingredients, (i) => i.sectionName).map(
+                (section) => ({
+                    name: section.name,
+                    ingredients: section.items,
+                }),
+            );
+
+            // Group steps by section (preserving order)
+            const stepSections: StepSection[] = this.groupBySection(steps, (s) => s.sectionName).map((section) => ({
+                name: section.name,
+                steps: section.items,
+            }));
+
             // Map database recipe to UI format
             const mappedRecipe: RecipeDetail = {
                 id: recipeData.id,
@@ -92,19 +140,10 @@ export class RecipeDetailPage implements OnInit {
                 prepTime: recipeData.prep_time || 0,
                 cookTime: recipeData.cook_time || 0,
                 servings: recipeData.servings || 2,
-                ingredients: (recipeData.ingredients || [])
-                    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-                    .map((ing) => ({
-                        amount: Number(ing.amount) || 0,
-                        unit: ing.unit || '',
-                        name: ing.name,
-                    })),
-                steps: (recipeData.recipe_steps || [])
-                    .sort((a, b) => (a.step_number || 0) - (b.step_number || 0))
-                    .map((step) => ({
-                        step: step.step_number || 0,
-                        description: step.description,
-                    })),
+                ingredients,
+                steps,
+                ingredientSections,
+                stepSections,
             };
 
             this.recipe.set(mappedRecipe);
@@ -129,13 +168,18 @@ export class RecipeDetailPage implements OnInit {
         return getDisplayImage(r.imageUrl, r.category);
     });
 
-    adjustedIngredients = computed(() => {
+    /** Ingredients adjusted for current servings, grouped by section */
+    adjustedIngredientSections = computed(() => {
         const r = this.recipe();
         if (!r) return [];
         const ratio = this.servings() / r.servings;
-        return r.ingredients.map((ing) => ({
-            ...ing,
-            amount: Math.round(ing.amount * ratio * 10) / 10,
+
+        return r.ingredientSections.map((section) => ({
+            name: section.name,
+            ingredients: section.ingredients.map((ing) => ({
+                ...ing,
+                amount: Math.round(ing.amount * ratio * 10) / 10,
+            })),
         }));
     });
 
@@ -179,5 +223,28 @@ export class RecipeDetailPage implements OnInit {
         }
 
         this.router.navigate(['/']);
+    }
+
+    /**
+     * Groups items by section name while preserving their original order.
+     * Items with the same section_name are grouped together in the order they appear.
+     */
+    private groupBySection<T>(
+        items: T[],
+        getSectionName: (item: T) => string | null,
+    ): { name: string | null; items: T[] }[] {
+        const sections: { name: string | null; items: T[] }[] = [];
+        const sectionMap = new Map<string | null, T[]>();
+
+        for (const item of items) {
+            const sectionName = getSectionName(item);
+            if (!sectionMap.has(sectionName)) {
+                sectionMap.set(sectionName, []);
+                sections.push({ name: sectionName, items: sectionMap.get(sectionName)! });
+            }
+            sectionMap.get(sectionName)!.push(item);
+        }
+
+        return sections;
     }
 }

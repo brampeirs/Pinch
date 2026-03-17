@@ -8,10 +8,12 @@ interface IngredientForm {
     name: string;
     amount: number | null;
     unit: string;
+    section_name?: string | null;
 }
 
 interface StepForm {
     description: string;
+    section_name?: string | null;
 }
 
 @Component({
@@ -107,6 +109,7 @@ export class AddRecipePage implements OnInit {
                     name: ing.name,
                     amount: ing.amount ? Number(ing.amount) : null,
                     unit: ing.unit || '',
+                    section_name: ing.section_name,
                 })),
             );
         }
@@ -114,7 +117,12 @@ export class AddRecipePage implements OnInit {
         // Load steps
         if (data.recipe_steps && data.recipe_steps.length > 0) {
             const sortedSteps = [...data.recipe_steps].sort((a, b) => (a.step_number || 0) - (b.step_number || 0));
-            this.steps.set(sortedSteps.map((step) => ({ description: step.description })));
+            this.steps.set(
+                sortedSteps.map((step) => ({
+                    description: step.description,
+                    section_name: step.section_name,
+                })),
+            );
         }
 
         this.loading.set(false);
@@ -220,9 +228,9 @@ export class AddRecipePage implements OnInit {
             if (chunk.delta) {
                 fullJson += chunk.delta;
 
-                // Try to extract complete ingredient objects as they come in
+                // Try to extract complete ingredient objects as they come in (with optional section_name)
                 const matches = fullJson.matchAll(
-                    /\{"name":"([^"]+)","amount":(null|\d+(?:\.\d+)?),"unit":"([^"]*)"\}/g,
+                    /\{"name":"([^"]+)","amount":(null|\d+(?:\.\d+)?),"unit":"([^"]*)","section_name":(null|"([^"]*)")\}/g,
                 );
                 const items: IngredientForm[] = [];
                 for (const match of matches) {
@@ -230,6 +238,7 @@ export class AddRecipePage implements OnInit {
                         name: match[1],
                         amount: match[2] === 'null' ? null : parseFloat(match[2]),
                         unit: match[3],
+                        section_name: match[4] === 'null' ? null : match[5] || null,
                     });
                 }
                 // Only update if we found new items
@@ -272,13 +281,18 @@ export class AddRecipePage implements OnInit {
             if (chunk.delta) {
                 fullJson += chunk.delta;
 
-                // Try to extract complete step objects as they come in
-                const matches = fullJson.matchAll(/\{"description":"((?:[^"\\]|\\.)*)"\}/g);
+                // Try to extract complete step objects as they come in (with optional section_name)
+                const matches = fullJson.matchAll(
+                    /\{"description":"((?:[^"\\]|\\.)*)","section_name":(null|"([^"]*)")\}/g,
+                );
                 const items: StepForm[] = [];
                 for (const match of matches) {
                     // Unescape JSON string
                     const desc = match[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-                    items.push({ description: desc });
+                    items.push({
+                        description: desc,
+                        section_name: match[2] === 'null' ? null : match[3] || null,
+                    });
                 }
                 // Only update if we found new items
                 if (items.length > extractedCount) {
@@ -340,11 +354,13 @@ export class AddRecipePage implements OnInit {
             amount: i.amount ?? undefined,
             unit: i.unit || undefined,
             sort_order: idx,
+            section_name: i.section_name || undefined,
         }));
 
         const stepsData = validSteps.map((s, idx) => ({
             step_number: idx + 1,
             description: s.description,
+            section_name: s.section_name || undefined,
         }));
 
         // Call create or update based on mode
