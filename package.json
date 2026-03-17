@@ -9,18 +9,6 @@
     "test": "ng test",
     "import-supabase-types": "supabase gen types typescript --linked --schema public > ./src/app/models/database.types.ts"
   },
-  "prettier": {
-    "printWidth": 100,
-    "singleQuote": true,
-    "overrides": [
-      {
-        "files": "*.html",
-        "options": {
-          "parser": "angular"
-        }
-      }
-    ]
-  },
   "private": true,
   "packageManager": "npm@11.4.2",
   "dependencies": {
@@ -48,6 +36,7 @@
     "@tailwindcss/postcss": "^4.2.1",
     "jsdom": "^27.1.0",
     "postcss": "^8.5.8",
+    "prettier": "^3.8.1",
     "supabase": "^2.77.1",
     "tailwindcss": "^4.2.1",
     "typescript": "~5.9.2",
