@@ -146,71 +146,21 @@ export class SupabaseService {
     ingredients: { name: string; amount?: number; unit?: string; sort_order?: number }[],
     steps: { step_number: number; description: string }[]
   ) {
-    // Insert the recipe first
-    const { data: recipeData, error: recipeError } = await this.supabase
-      .from('recipes')
-      .insert({
-        title: recipe.title,
-        description: recipe.description,
-        category_id: recipe.category_id,
-        image_url: recipe.image_url,
-        prep_time: recipe.prep_time,
-        cook_time: recipe.cook_time,
-        servings: recipe.servings,
-        is_published: recipe.is_published ?? true,
-      })
-      .select()
-      .single();
-
-    if (recipeError || !recipeData) {
-      return { data: null, error: recipeError };
-    }
-
-    // Insert ingredients
-    if (ingredients.length > 0) {
-      const ingredientsToInsert = ingredients.map((ing, index) => ({
-        recipe_id: recipeData.id,
-        name: ing.name,
-        amount: ing.amount,
-        unit: ing.unit,
-        sort_order: ing.sort_order ?? index,
-      }));
-
-      const { error: ingredientsError } = await this.supabase
-        .from('ingredients')
-        .insert(ingredientsToInsert);
-
-      if (ingredientsError) {
-        // Rollback: delete the recipe
-        await this.supabase.from('recipes').delete().eq('id', recipeData.id);
-        return { data: null, error: ingredientsError };
-      }
-    }
-
-    // Insert steps
-    if (steps.length > 0) {
-      const stepsToInsert = steps.map((step) => ({
-        recipe_id: recipeData.id,
-        step_number: step.step_number,
-        description: step.description,
-      }));
-
-      const { error: stepsError } = await this.supabase.from('recipe_steps').insert(stepsToInsert);
-
-      if (stepsError) {
-        // Rollback: delete ingredients and recipe
-        await this.supabase.from('ingredients').delete().eq('recipe_id', recipeData.id);
-        await this.supabase.from('recipes').delete().eq('id', recipeData.id);
-        return { data: null, error: stepsError };
-      }
-    }
-
-    // Trigger embedding generation (fire and forget - don't block recipe creation)
-    this.embedRecipe(recipeData.id).catch((err) => {
-      console.warn('Failed to embed recipe:', err);
+    // Call edge function instead of direct DB operations
+    const { data, error } = await this.supabase.functions.invoke('create-recipe', {
+      body: { recipe, ingredients, steps },
     });
 
-    return { data: recipeData, error: null };
+    if (error) {
+      return { data: null, error };
+    }
+
+    // Edge function returns { success: boolean, data?: {...}, error?: string }
+    if (!data.success) {
+      return { data: null, error: new Error(data.error || 'Unknown error') };
+    }
+
+    return { data: data.data, error: null };
   }
 
   // ============ UPDATE RECIPE ============
