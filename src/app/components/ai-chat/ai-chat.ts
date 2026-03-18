@@ -4,6 +4,7 @@ import { DefaultChatTransport, type UIMessage } from 'ai';
 import { MarkdownComponent } from 'ngx-markdown';
 import { environment } from '../../../environments/environment';
 import { ChatViewModeService } from '../../services/chat-view-mode.service';
+import { ChatContextService } from '../../services/chat-context.service';
 import { ImageUploadService, UploadingImage } from '../../services/image-upload.service';
 import { ChatModeToggle } from './chat-mode-toggle/chat-mode-toggle';
 import { ChatRecipeCard, ChatRecipe } from './chat-recipe-card/chat-recipe-card';
@@ -33,6 +34,7 @@ export class AiChat {
     @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
     protected readonly viewModeService = inject(ChatViewModeService);
+    private readonly chatContextService = inject(ChatContextService);
     private readonly imageUploadService = inject(ImageUploadService);
 
     // Images being uploaded or ready to send
@@ -446,6 +448,7 @@ export class AiChat {
     sendMessage() {
         const message = this.inputMessage().trim();
         const images = this.completedImageUrls();
+        const recipeId = this.chatContextService.contextRecipeId();
 
         // Block send if uploads in progress or nothing to send
         if (this.hasUploadsInProgress()) return;
@@ -464,16 +467,20 @@ export class AiChat {
             url, // This is now a public URL, not base64
         }));
 
-        // Send message with parts
+        // Build body with recipe context (if available from ChatContextService)
+        const body = recipeId ? { contextRecipeId: recipeId } : undefined;
+
+        // Send message with parts and body context
         // Note: SDK types are limited but do support file parts at runtime
         if (message && fileParts.length > 0) {
-            this.chat.sendMessage({
-                parts: [{ type: 'text' as const, text: message }, ...fileParts] as any,
-            });
+            this.chat.sendMessage(
+                { parts: [{ type: 'text' as const, text: message }, ...fileParts] as any },
+                { body },
+            );
         } else if (fileParts.length > 0) {
-            this.chat.sendMessage({ parts: fileParts as any });
+            this.chat.sendMessage({ parts: fileParts as any }, { body });
         } else {
-            this.chat.sendMessage({ text: message });
+            this.chat.sendMessage({ text: message }, { body });
         }
 
         // Cleanup: revoke all blob URLs and clear state

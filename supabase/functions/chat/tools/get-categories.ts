@@ -8,9 +8,11 @@ export function createGetCategoriesTool(supabase: SupabaseClient) {
 Use this when the user asks about available categories, wants to know what categories exist,
 or needs to select a category for a new recipe.
 Returns a list of categories with their ID, name, emoji, and description.`,
-        parameters: z.object({}),
-        execute: async () => {
-            console.log('📁 getCategories called');
+        inputSchema: z.object({
+            _reason: z.string().describe('Reason for calling this tool (can be any text)'),
+        }),
+        execute: async ({ _reason }) => {
+            console.log('📁 getCategories called, reason:', _reason);
 
             const { data: categories, error } = await supabase
                 .from('categories')
@@ -32,15 +34,15 @@ Returns a list of categories with their ID, name, emoji, and description.`,
             return {
                 success: true,
                 message: `Er zijn ${categories?.length ?? 0} categorieën beschikbaar.`,
-                categories: categories?.map((c) => ({
-                    id: c.id,
-                    name: c.name,
-                    slug: c.slug,
-                    emoji: c.emoji,
-                    description: c.description,
-                })) ?? [],
+                categories:
+                    categories?.map((c) => ({
+                        id: c.id,
+                        name: c.name,
+                        slug: c.slug,
+                        emoji: c.emoji,
+                        description: c.description,
+                    })) ?? [],
             };
         },
     });
 }
-

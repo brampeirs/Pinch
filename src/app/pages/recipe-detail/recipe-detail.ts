@@ -1,7 +1,8 @@
-import { Component, inject, signal, computed, OnInit, DestroyRef } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SupabaseService } from '../../services/supabase.service';
+import { ChatContextService } from '../../services/chat-context.service';
 import { Tables } from '../../models/database.types';
 import { getDisplayImage } from '../../utils/placeholder';
 
@@ -64,10 +65,11 @@ interface RecipeDetail {
     templateUrl: './recipe-detail.html',
     styleUrl: './recipe-detail.scss',
 })
-export class RecipeDetailPage implements OnInit {
+export class RecipeDetailPage implements OnInit, OnDestroy {
     private route = inject(ActivatedRoute);
     private router = inject(Router);
     private supabase = inject(SupabaseService);
+    private chatContext = inject(ChatContextService);
     private destroyRef = inject(DestroyRef);
 
     servings = signal(2);
@@ -153,6 +155,9 @@ export class RecipeDetailPage implements OnInit {
 
             this.recipe.set(mappedRecipe);
             this.servings.set(mappedRecipe.servings);
+
+            // Set chat context so the global chat knows which recipe we're viewing
+            this.chatContext.setRecipeContext(mappedRecipe.id);
         } catch (err) {
             console.error('Error loading recipe:', err);
             this.error.set('Er ging iets mis bij het laden van het recept.');
@@ -251,5 +256,10 @@ export class RecipeDetailPage implements OnInit {
         }
 
         return sections;
+    }
+
+    ngOnDestroy(): void {
+        // Clear chat context when leaving the recipe page
+        this.chatContext.clearRecipeContext();
     }
 }

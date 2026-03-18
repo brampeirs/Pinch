@@ -1,3 +1,4 @@
+// Chat function v3 - fixed schema issues for getCategories and getRecipeDetail
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { ToolLoopAgent, stepCountIs, createAgentUIStreamResponse, createGateway } from 'npm:ai';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
@@ -5,6 +6,7 @@ import { createFindRecipeTool } from './tools/find-recipe.ts';
 import { createCreateRecipeTool } from './tools/create-recipe.ts';
 import { createUploadImageTool, setAvailableImages } from './tools/upload-image.ts';
 import { createGetCategoriesTool } from './tools/get-categories.ts';
+import { createGetRecipeDetailTool, setContextRecipeId } from './tools/get-recipe-detail.ts';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -73,6 +75,32 @@ When creating a recipe and a category is needed:
 2. Use the category UUID (id field) when calling createRecipe
 3. Never use category names directly - always use the UUID from getCategories
 
+**RECIPE DETAILS - CRITICAL RULES:**
+When a user asks for more details about a specific recipe:
+1. If you have the recipe ID (from search results or context), call getRecipeDetail
+2. Present the information in a helpful, structured way
+3. Include key info: prep time, cook time, servings, ingredients count
+4. If asked about ingredients or steps, list them clearly
+
+**CONTEXT-AWARE QUESTIONS - VERY IMPORTANT:**
+When a user asks about "this recipe", "dit recept", "the recipe", or similar:
+1. ALWAYS call getRecipeDetail WITHOUT a recipeId parameter
+2. The system will automatically use the context recipe (the one they're viewing)
+3. Do NOT ask the user which recipe - just call getRecipeDetail and it will work
+4. This applies to ANY question that implies a specific recipe context
+
+Examples that should trigger getRecipeDetail (no recipeId needed):
+- "voor hoeveel personen is dit recept?" → call getRecipeDetail()
+- "what are the ingredients?" → call getRecipeDetail()
+- "how long does this take?" → call getRecipeDetail()
+- "is this vegetarian?" → call getRecipeDetail()
+
+**FOLLOW-UP QUESTIONS:**
+When user says "tell me more about the first one" or similar:
+1. Look at the recipe IDs from your previous findRecipe results
+2. Call getRecipeDetail with the appropriate recipe ID
+3. Present the detailed information helpfully
+
 **Other capabilities:**
 - Answer cooking questions (be helpful but concise)
 - Provide cooking tips and advice
@@ -110,6 +138,7 @@ function getRecipeAgent(): ToolLoopAgent {
     const createRecipeTool = createCreateRecipeTool(supabase);
     const uploadImageTool = createUploadImageTool(supabase);
     const getCategoriesTool = createGetCategoriesTool(supabase);
+    const getRecipeDetailTool = createGetRecipeDetailTool(supabase);
 
     // Create the ToolLoopAgent
     recipeAgent = new ToolLoopAgent({
@@ -119,6 +148,7 @@ function getRecipeAgent(): ToolLoopAgent {
             createRecipe: createRecipeTool,
             uploadImage: uploadImageTool,
             getCategories: getCategoriesTool,
+            getRecipeDetail: getRecipeDetailTool,
         },
         instructions: AGENT_INSTRUCTIONS,
         stopWhen: stepCountIs(15),
@@ -139,7 +169,14 @@ Deno.serve(async (req: Request) => {
 
     try {
         const body = await req.json();
-        const { messages } = body;
+        const { messages, contextRecipeId } = body;
+
+        // Set the context recipe ID for tools to use
+        setContextRecipeId(contextRecipeId || null);
+
+        if (contextRecipeId) {
+            console.log(`📍 [Chat] Context recipe ID: ${contextRecipeId}`);
+        }
 
         // Extract images from the last user message and make them available to tools
         const lastUserMessage = [...messages].reverse().find((m: { role: string }) => m.role === 'user');
