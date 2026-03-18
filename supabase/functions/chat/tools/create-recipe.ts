@@ -24,29 +24,12 @@ Example: recipe: { title: "My Recipe", image_url: "https://supabase.co/storage/.
                 '📝 createRecipe called:',
                 JSON.stringify({
                     title: recipe.title,
-                    category: recipe.category,
+                    category_id: recipe.category_id,
                     image_url: recipe.image_url ?? 'NOT PROVIDED',
                     ingredientCount: ingredients.length,
                     stepCount: steps.length,
                 }),
             );
-
-            // Lookup category UUID if category name was provided
-            let categoryId: string | undefined;
-            if (recipe.category) {
-                const { data: categoryData } = await supabase
-                    .from('categories')
-                    .select('id')
-                    .ilike('name', recipe.category)
-                    .single();
-
-                if (categoryData) {
-                    categoryId = categoryData.id;
-                    console.log(`📁 Found category: ${recipe.category} -> ${categoryId}`);
-                } else {
-                    console.warn(`⚠️ Category not found: ${recipe.category}`);
-                }
-            }
 
             // Auto-assign sort_order to ingredients if not provided
             const ingredientsWithOrder = ingredients.map((ing: Ingredient, idx: number) => ({
@@ -55,12 +38,11 @@ Example: recipe: { title: "My Recipe", image_url: "https://supabase.co/storage/.
             }));
 
             // Prepare payload for edge function (matches CreateRecipeRequest)
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { category, image_url, ...recipeWithoutCategoryAndImage } = recipe;
+            const { image_url, ...recipeWithoutImage } = recipe;
             const payload = {
                 recipe: {
-                    ...recipeWithoutCategoryAndImage,
-                    category_id: categoryId, // Resolved UUID or undefined
+                    ...recipeWithoutImage,
+                    // category_id is already a UUID from getCategories tool
                     image_url: image_url, // From uploadImage tool or undefined
                     is_published: true, // Default to published
                 },

@@ -42,16 +42,16 @@ export const recipeSchema = z.object({
 
 /**
  * Schema for the recipe object (used by chat tool)
- * Contains category (name string) instead of category_id
- * The tool will lookup the UUID from the category name
+ * Contains category_id (UUID) - call getCategories first to get available IDs
  */
 export const recipeToolSchema = z.object({
     title: z.string().describe('Recipe title, e.g. "Classic Chocolate Cake"'),
     description: z.string().optional().describe('Brief description of the recipe'),
-    category: z
+    category_id: z
         .string()
+        .uuid()
         .optional()
-        .describe('Category name: Pasta, Soups, Salads, Main Dishes, Desserts, or Breakfast'),
+        .describe('Category UUID from getCategories tool. Call getCategories first to get available IDs.'),
     image_url: z.string().url().optional().describe('URL of the recipe cover image (from uploadImage tool)'),
     prep_time: z.number().optional().describe('Preparation time in minutes'),
     cook_time: z.number().optional().describe('Cooking time in minutes'),

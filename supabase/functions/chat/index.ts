@@ -4,6 +4,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { createFindRecipeTool } from './tools/find-recipe.ts';
 import { createCreateRecipeTool } from './tools/create-recipe.ts';
 import { createUploadImageTool, setAvailableImages } from './tools/upload-image.ts';
+import { createGetCategoriesTool } from './tools/get-categories.ts';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -66,6 +67,12 @@ When a user wants to save/create/add a recipe:
 5. The UI automatically renders the created recipe as a beautiful card
 6. Your response after createRecipe must be COMPLETELY EMPTY - zero characters
 
+**CATEGORIES - CRITICAL RULES:**
+When creating a recipe and a category is needed:
+1. First call getCategories to retrieve available categories with their UUIDs
+2. Use the category UUID (id field) when calling createRecipe
+3. Never use category names directly - always use the UUID from getCategories
+
 **Other capabilities:**
 - Answer cooking questions (be helpful but concise)
 - Provide cooking tips and advice
@@ -77,7 +84,6 @@ When a user wants to save/create/add a recipe:
 - Use **bold** for key terms
 - Avoid long text blocks
 
-Available categories: Pasta, Soups, Salads, Main Dishes, Desserts, Breakfast
 Common tags: quick, vegetarian, vegan, spicy, comfort food, healthy
 `;
 
@@ -103,6 +109,7 @@ function getRecipeAgent(): ToolLoopAgent {
     const findRecipeTool = createFindRecipeTool(supabase);
     const createRecipeTool = createCreateRecipeTool(supabase);
     const uploadImageTool = createUploadImageTool(supabase);
+    const getCategoriesTool = createGetCategoriesTool(supabase);
 
     // Create the ToolLoopAgent
     recipeAgent = new ToolLoopAgent({
@@ -111,6 +118,7 @@ function getRecipeAgent(): ToolLoopAgent {
             findRecipe: findRecipeTool,
             createRecipe: createRecipeTool,
             uploadImage: uploadImageTool,
+            getCategories: getCategoriesTool,
         },
         instructions: AGENT_INSTRUCTIONS,
         stopWhen: stepCountIs(15),
