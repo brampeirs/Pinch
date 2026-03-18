@@ -98,7 +98,7 @@
                         @for (part of message.parts; track $index) {
                             <!-- Text parts with Markdown -->
                             @if (part.type === 'text') {
-                                <div class="prose max-w-none">
+                                <div class="prose prose-img:rounded-xl max-w-none">
                                     <markdown [data]="part.text"></markdown>
                                 </div>
                             }
@@ -156,11 +156,11 @@
 
                             <!-- Find recipe tool - only show output (loading is handled globally) -->
                             @if (part.type === 'tool-findRecipe' && $any(part).state === 'output-available') {
-                                @let output = $any(part).output;
+                                @let recipes = $any(part).output;
                                 <!-- Recipe cards -->
-                                @if (output?.recipes?.length) {
+                                @if (recipes?.length) {
                                     <div class="grid gap-2">
-                                        @for (recipe of output.recipes; track recipe.id) {
+                                        @for (recipe of recipes; track recipe.id) {
                                             <app-chat-recipe-card [recipe]="recipe" />
                                         }
                                     </div>
@@ -478,7 +478,9 @@
                 @if (!isLoading) {
                     <button
                         (click)="sendMessage()"
-                        [disabled]="(!inputMessage().trim() && uploadingImages().length === 0) || hasUploadsInProgress()"
+                        [disabled]="
+                            (!inputMessage().trim() && uploadingImages().length === 0) || hasUploadsInProgress()
+                        "
                         class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
                     >
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

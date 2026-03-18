@@ -18,9 +18,8 @@ async function generateEmbedding(text: string): Promise<number[]> {
 
 export function createFindRecipeTool(supabase: SupabaseClient) {
     return tool({
-        description: `Search for recipes in the database using semantic search.
-Use this when the user asks for recipes, wants cooking ideas, or mentions ingredients.
-Returns matching recipes with title, description, and similarity score.`,
+        description: `Search for recipes using semantic search.
+Use when user asks for recipes or mentions ingredients. This tool returns a structured output that the UI WILL render as recipe cards. Do NOT generate any text after calling this tool, except if no results.`,
         inputSchema: z.object({
             searchQuery: z.string().describe('Search terms: ingredients, cooking style, cuisine type'),
             category: z
@@ -50,7 +49,7 @@ Returns matching recipes with title, description, and similarity score.`,
             const params = {
                 query_embedding: embedding,
                 match_count: Math.min(matchCount || 3, 3),
-                match_threshold: 0.1,
+                match_threshold: 0.5,
                 filter_category: category || null,
                 filter_tags: tags || null,
                 filter_max_time: maxTime || null,
@@ -71,12 +70,7 @@ Returns matching recipes with title, description, and similarity score.`,
 
             if (error) {
                 console.error('❌ Search error:', error);
-                return {
-                    success: false,
-                    error: error.message,
-                    recipes: [],
-                    message: 'Error searching recipes.',
-                };
+                return [];
             }
 
             const recipes =
@@ -102,20 +96,7 @@ Returns matching recipes with title, description, and similarity score.`,
                     }),
                 ) || [];
 
-            // Generate a brief message based on results
-            const count = recipes.length;
-            const message =
-                count === 0
-                    ? 'No recipes found. Try different ingredients or search terms.'
-                    : count === 1
-                      ? 'Found 1 recipe:'
-                      : `Found ${count} recipes:`;
-
-            return {
-                success: true,
-                message,
-                recipes,
-            };
+            return recipes;
         },
     });
 }

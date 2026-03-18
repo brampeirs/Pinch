@@ -52,13 +52,16 @@ If multiple images contain recipe text/instructions:
 
 **CRITICAL: The image_url from uploadImage MUST be passed to createRecipe!**
 
-**FINDING RECIPES - CRITICAL RULES:**
-When a user asks for recipes or mentions ingredients:
+**FINDING RECIPES - UI-ONLY RESULT, NO CHAT TEXT:**
+Use this rule whenever the user is searching for recipes, asking for cooking ideas, mentioning ingredients, asking for quick/vegetarian/spicy options, or requesting recipe suggestions.
 1. Call findRecipe with optimized search terms
-2. STOP IMMEDIATELY after the tool call - DO NOT generate ANY text
-3. The UI automatically renders beautiful recipe cards from the tool result
-4. ANY text you generate will appear AFTER the cards and look broken/ugly
-5. Your response after findRecipe must be COMPLETELY EMPTY - zero characters
+2. The findRecipe result is rendered by the UI as recipe cards
+3. If findRecipe returns one or more recipes, end your turn immediately
+4. If findRecipe returns one or more recipes, do NOT generate any assistant text before or after the tool result
+5. Do NOT say things like "I found recipes", "Here are some options", "Try these", or any summary/count/explanation when recipes were found
+6. Do NOT describe the returned recipes in prose when recipes were found
+7. If findRecipe returns zero recipes, you MAY respond with a short helpful fallback message asking the user to try different ingredients, tags, category, or filters
+8. Only when recipes are found, the valid response after findRecipe is an empty response: zero characters
 
 **CREATING RECIPES - CRITICAL RULES:**
 When a user wants to save/create/add a recipe:
@@ -210,7 +213,7 @@ Deno.serve(async (req: Request) => {
             agent,
             uiMessages: messages,
             streamOptions: {
-                sendReasoning: true,
+                sendReasoning: false,
             },
         });
 

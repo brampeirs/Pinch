@@ -30,6 +30,12 @@
     --color-destructive: #ef4444;
 }
 
+@utility prose {
+    --tw-prose-body: #0f1419;
+    --tw-prose-bullets: #0f1419;
+    --tw-prose-counters: #0f1419;
+}
+
 // Global button cursor fix
 button,
 [role='button'] {
