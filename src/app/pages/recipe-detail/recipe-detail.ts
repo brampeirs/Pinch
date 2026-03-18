@@ -1,4 +1,5 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SupabaseService } from '../../services/supabase.service';
 import { Tables } from '../../models/database.types';
@@ -67,6 +68,7 @@ export class RecipeDetailPage implements OnInit {
     private route = inject(ActivatedRoute);
     private router = inject(Router);
     private supabase = inject(SupabaseService);
+    private destroyRef = inject(DestroyRef);
 
     servings = signal(2);
     recipe = signal<RecipeDetail | null>(null);
@@ -75,14 +77,17 @@ export class RecipeDetailPage implements OnInit {
     deleting = signal(false);
     showDeleteConfirm = signal(false);
 
-    async ngOnInit() {
-        const id = this.route.snapshot.paramMap.get('id');
-        if (id) {
-            await this.loadRecipe(id);
-        } else {
-            this.error.set('Geen recept ID gevonden.');
-            this.loading.set(false);
-        }
+    ngOnInit() {
+        // Subscribe to route param changes so navigation between recipes works
+        this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+            const id = params.get('id');
+            if (id) {
+                this.loadRecipe(id);
+            } else {
+                this.error.set('Geen recept ID gevonden.');
+                this.loading.set(false);
+            }
+        });
     }
 
     private async loadRecipe(id: string) {
