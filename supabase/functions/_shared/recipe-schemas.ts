@@ -52,6 +52,7 @@ export const recipeToolSchema = z.object({
         .string()
         .optional()
         .describe('Category name: Pasta, Soups, Salads, Main Dishes, Desserts, or Breakfast'),
+    image_url: z.string().url().optional().describe('URL of the recipe cover image (from uploadImage tool)'),
     prep_time: z.number().optional().describe('Preparation time in minutes'),
     cook_time: z.number().optional().describe('Cooking time in minutes'),
     servings: z.number().optional().describe('Number of servings'),

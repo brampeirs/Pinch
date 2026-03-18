@@ -9,12 +9,15 @@ import {
 export function createCreateRecipeTool(supabase: SupabaseClient) {
     return tool({
         description: `Create a new recipe in the database.
-Use this when the user wants to save a recipe, provides recipe details (title, ingredients, steps), 
+Use this when the user wants to save a recipe, provides recipe details (title, ingredients, steps),
 or asks to create/add a recipe. Extract the recipe information from the user's message and structure it properly.
 
 The tool will save the recipe and return the created recipe data for display.
 
-Note: image_url is not yet supported - recipes are created without images initially.`,
+**CRITICAL: If you called uploadImage before this, you MUST include the URL it returned!**
+The uploadImage tool returns: { success: true, url: "https://..." }
+You MUST pass that url value as image_url in the recipe object.
+Example: recipe: { title: "My Recipe", image_url: "https://supabase.co/storage/..." }`,
         inputSchema: createRecipeToolInputSchema,
         execute: async ({ recipe, ingredients, steps }) => {
             console.log(
@@ -22,6 +25,7 @@ Note: image_url is not yet supported - recipes are created without images initia
                 JSON.stringify({
                     title: recipe.title,
                     category: recipe.category,
+                    image_url: recipe.image_url ?? 'NOT PROVIDED',
                     ingredientCount: ingredients.length,
                     stepCount: steps.length,
                 }),
@@ -52,12 +56,12 @@ Note: image_url is not yet supported - recipes are created without images initia
 
             // Prepare payload for edge function (matches CreateRecipeRequest)
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { category, ...recipeWithoutCategory } = recipe;
+            const { category, image_url, ...recipeWithoutCategoryAndImage } = recipe;
             const payload = {
                 recipe: {
-                    ...recipeWithoutCategory,
+                    ...recipeWithoutCategoryAndImage,
                     category_id: categoryId, // Resolved UUID or undefined
-                    image_url: undefined, // No image support in chat yet
+                    image_url: image_url, // From uploadImage tool or undefined
                     is_published: true, // Default to published
                 },
                 ingredients: ingredientsWithOrder,
