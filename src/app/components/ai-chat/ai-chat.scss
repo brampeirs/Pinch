@@ -339,3 +339,79 @@
         }
     }
 }
+
+// =====================
+// Image Upload Progress Styles
+// =====================
+.upload-preview {
+    position: relative;
+}
+
+.upload-progress-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 0.5rem;
+}
+
+.upload-progress-ring {
+    width: 36px;
+    height: 36px;
+    transform: rotate(-90deg);
+}
+
+.upload-progress-bg {
+    opacity: 0.3;
+    color: white;
+}
+
+.upload-progress-fill {
+    color: white;
+    transition: stroke-dashoffset 0.2s ease-out;
+    stroke-linecap: round;
+}
+
+.upload-progress-text {
+    position: absolute;
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: white;
+}
+
+.upload-error-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    background: rgba(239, 68, 68, 0.85); // red-500
+    border-radius: 0.5rem;
+    color: white;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &:hover {
+        background: rgba(220, 38, 38, 0.9); // red-600
+    }
+}
+
+.upload-complete-badge {
+    position: absolute;
+    bottom: 0.25rem;
+    right: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    background: #22c55e; // green-500
+    border-radius: 50%;
+    color: white;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}

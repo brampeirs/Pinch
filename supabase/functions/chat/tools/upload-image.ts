@@ -1,7 +1,6 @@
 import { tool } from 'npm:ai';
 import { SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 import { z } from 'npm:zod';
-import { decodeBase64 } from 'jsr:@std/encoding@1/base64';
 
 const uploadImageInputSchema = z.object({
     imageIndex: z
@@ -14,7 +13,7 @@ const uploadImageInputSchema = z.object({
         .describe('The purpose of the image: "recipe-cover" for the main recipe photo'),
 });
 
-// Store for images extracted from messages - set by the chat function
+// Store for images extracted from messages - now contains public URLs (not data URLs)
 let availableImages: Array<{ url: string; mediaType: string }> = [];
 
 export function setAvailableImages(images: Array<{ url: string; mediaType: string }>) {
@@ -24,8 +23,9 @@ export function setAvailableImages(images: Array<{ url: string; mediaType: strin
 
 export function createUploadImageTool(supabase: SupabaseClient) {
     return tool({
-        description: `Upload an image to storage and get a public URL.
+        description: `Upload an image to permanent storage and get a public URL.
 Use this when the user provides images and you need to store one as a recipe cover photo.
+Images are pre-uploaded to temporary storage. This tool copies them to permanent storage.
 
 When the user uploads multiple images:
 - Identify which image is the "cover photo" (nicely plated dish, good composition, finished product)
@@ -38,7 +38,7 @@ Returns the public URL that can be passed to createRecipe as image_url.`,
             console.log('📸 uploadImage called:', { imageIndex, purpose, availableCount: availableImages.length });
 
             try {
-                // Get image from available images
+                // Validate image index
                 if (imageIndex < 0 || imageIndex >= availableImages.length) {
                     return {
                         success: false,
@@ -47,77 +47,56 @@ Returns the public URL that can be passed to createRecipe as image_url.`,
                 }
 
                 const image = availableImages[imageIndex];
-                const imageDataUrl = image.url;
+                const sourceUrl = image.url;
 
-                console.log(`📷 Image URL length: ${imageDataUrl?.length ?? 0}`);
-                console.log(`📷 Image URL starts with: ${imageDataUrl?.substring(0, 50)}`);
+                console.log(`📷 Source URL: ${sourceUrl?.substring(0, 100)}`);
 
-                // Parse the data URL
-                const matches = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/s);
-                if (!matches) {
-                    console.log(`❌ Data URL regex did not match`);
+                // Extract path from URL: .../recipe-images/chat-uploads/filename.ext
+                const pathMatch = sourceUrl.match(/recipe-images\/(.+)$/);
+                if (!pathMatch) {
+                    console.log(`❌ Could not extract storage path from URL`);
                     return {
                         success: false,
-                        error: 'Invalid data URL format',
+                        error: 'Could not extract storage path from URL',
                     };
                 }
 
-                const mimeType = matches[1];
-                const base64Data = matches[2];
-                console.log(`📷 Parsed mimeType: ${mimeType}, base64 length: ${base64Data.length}`);
+                const sourcePath = pathMatch[1]; // chat-uploads/timestamp-random.ext
+                console.log(`📷 Source path: ${sourcePath}`);
 
-                // Determine file extension
-                const extMap: Record<string, string> = {
-                    'image/jpeg': 'jpg',
-                    'image/png': 'png',
-                    'image/gif': 'gif',
-                    'image/webp': 'webp',
-                };
-                const ext = extMap[mimeType] || 'jpg';
+                // Determine file extension from source
+                const extMatch = sourcePath.match(/\.(\w+)$/);
+                const ext = extMatch ? extMatch[1] : 'jpg';
 
-                // Generate unique filename
+                // Generate new filename in recipes/ folder
                 const timestamp = Date.now();
                 const random = Math.random().toString(36).substring(2, 15);
-                const filename = `recipes/${timestamp}-${random}.${ext}`;
+                const destPath = `recipes/${timestamp}-${random}.${ext}`;
 
-                // Decode base64 to binary
-                const imageData = decodeBase64(base64Data);
-                console.log(`📷 Decoded image size: ${imageData.byteLength} bytes`);
+                console.log(`📷 Copying: ${sourcePath} → ${destPath}`);
 
-                if (imageData.byteLength === 0) {
+                // Copy file from chat-uploads/ to recipes/
+                const { error: copyError } = await supabase.storage.from('recipe-images').copy(sourcePath, destPath);
+
+                if (copyError) {
+                    console.error('❌ Copy error:', copyError);
                     return {
                         success: false,
-                        error: 'Decoded image is empty (0 bytes)',
+                        error: copyError.message,
                     };
                 }
 
-                // Upload to Supabase Storage
-                const { error: uploadError } = await supabase.storage
-                    .from('recipe-images')
-                    .upload(filename, imageData, {
-                        contentType: mimeType,
-                        upsert: false,
-                    });
-
-                if (uploadError) {
-                    console.error('❌ Upload error:', uploadError);
-                    return {
-                        success: false,
-                        error: uploadError.message,
-                    };
-                }
-
-                // Get public URL
+                // Get public URL for the new location
                 const {
                     data: { publicUrl },
-                } = supabase.storage.from('recipe-images').getPublicUrl(filename);
+                } = supabase.storage.from('recipe-images').getPublicUrl(destPath);
 
-                console.log('✅ Image uploaded:', publicUrl);
+                console.log('✅ Image copied to permanent storage:', publicUrl);
 
                 return {
                     success: true,
                     url: publicUrl,
-                    message: `Image uploaded successfully`,
+                    message: 'Image uploaded successfully',
                 };
             } catch (error) {
                 console.error('❌ Upload exception:', error);

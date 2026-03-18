@@ -1,9 +1,10 @@
-import { Component, signal, ElementRef, ViewChild, effect, inject, HostListener } from '@angular/core';
+import { Component, signal, computed, ElementRef, ViewChild, effect, inject, HostListener } from '@angular/core';
 import { Chat } from '@ai-sdk/angular';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import { MarkdownComponent } from 'ngx-markdown';
 import { environment } from '../../../environments/environment';
 import { ChatViewModeService } from '../../services/chat-view-mode.service';
+import { ImageUploadService, UploadingImage } from '../../services/image-upload.service';
 import { ChatModeToggle } from './chat-mode-toggle/chat-mode-toggle';
 import { ChatRecipeCard, ChatRecipe } from './chat-recipe-card/chat-recipe-card';
 
@@ -32,10 +33,19 @@ export class AiChat {
     @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
     protected readonly viewModeService = inject(ChatViewModeService);
+    private readonly imageUploadService = inject(ImageUploadService);
 
-    // Selected files for upload - store as data URLs since FileList cannot be merged
-    selectedFileDataUrls = signal<string[]>([]);
-    filePreviews = signal<string[]>([]);
+    // Images being uploaded or ready to send
+    uploadingImages = signal<UploadingImage[]>([]);
+
+    // Computed helpers for upload state
+    hasUploadsInProgress = computed(() => this.uploadingImages().some((img) => img.status === 'uploading'));
+
+    completedImageUrls = computed(() =>
+        this.uploadingImages()
+            .filter((img) => img.status === 'completed' && img.publicUrl)
+            .map((img) => ({ url: img.publicUrl!, mediaType: img.mediaType })),
+    );
 
     // Chat instance from @ai-sdk/angular with transport configuration
     public chat = new Chat({
@@ -242,6 +252,27 @@ export class AiChat {
         );
     }
 
+    // Check if uploadImage tool is active (server-side copying to permanent storage)
+    get isUploadImageInProgress(): boolean {
+        return this.lastAssistantMessageParts.some(
+            (part) =>
+                part.type === 'tool-uploadImage' &&
+                (part.state === 'input-streaming' || part.state === 'input-available'),
+        );
+    }
+
+    // Check if uploadImage has completed
+    get hasUploadImageOutput(): boolean {
+        return this.lastAssistantMessageParts.some(
+            (part) => part.type === 'tool-uploadImage' && part.state === 'output-available',
+        );
+    }
+
+    // Show "Uploading image..." when uploadImage tool is running
+    get showUploadingImage(): boolean {
+        return this.isLoading && this.isUploadImageInProgress && !this.hasUploadImageOutput;
+    }
+
     // Check if reasoning is currently streaming
     get isReasoningActive(): boolean {
         return this.lastAssistantMessageParts.some((part) => part.type === 'reasoning' && part.state === 'streaming');
@@ -262,11 +293,13 @@ export class AiChat {
     // - Reasoning starts (reasoning component shows "Thinking...")
     // - Text content arrives (content speaks for itself)
     // - Recipe creation starts (creating card shows its own loading state)
+    // - Upload image starts (show "Uploading image..." instead)
     get showThinking(): boolean {
         return (
             this.isLoading &&
             !this.isRecipeSearchInProgress &&
             !this.isCreateRecipeInProgress &&
+            !this.isUploadImageInProgress &&
             !this.hasReasoning &&
             !this.hasTextContent
         );
@@ -338,37 +371,71 @@ export class AiChat {
         const input = event.target as HTMLInputElement;
         if (!input.files || input.files.length === 0) return;
 
-        // Convert files to data URLs
-        const newDataUrls = await Promise.all(
-            Array.from(input.files)
-                .filter((file) => file.type.startsWith('image/'))
-                .map(
-                    (file) =>
-                        new Promise<string>((resolve) => {
-                            const reader = new FileReader();
-                            reader.onload = () => resolve(reader.result as string);
-                            reader.readAsDataURL(file);
-                        }),
-                ),
-        );
+        const imageFiles = Array.from(input.files).filter((file) => file.type.startsWith('image/'));
 
-        // Accumulate data URLs (FileList cannot be merged, so we store data URLs)
-        this.selectedFileDataUrls.set([...this.selectedFileDataUrls(), ...newDataUrls]);
-        this.filePreviews.set([...this.filePreviews(), ...newDataUrls]);
+        // Create upload entries immediately for all files
+        const newUploads: UploadingImage[] = imageFiles.map((file) => ({
+            id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            file,
+            previewUrl: this.imageUploadService.createPreviewUrl(file),
+            progress: 0,
+            status: 'uploading' as const,
+            mediaType: file.type,
+        }));
+
+        // Add to state (shows previews immediately)
+        this.uploadingImages.update((current) => [...current, ...newUploads]);
 
         // Clear file input so the same file can be selected again
         input.value = '';
+
+        // Start uploads in parallel
+        newUploads.forEach((upload) => this.startUpload(upload));
     }
 
-    // Remove a selected file
-    removeFile(index: number) {
-        const dataUrls = this.selectedFileDataUrls();
-        dataUrls.splice(index, 1);
-        this.selectedFileDataUrls.set([...dataUrls]);
+    private async startUpload(upload: UploadingImage) {
+        const { url, error } = await this.imageUploadService.uploadWithProgress(upload.file, (progress) => {
+            // Update progress for this specific upload
+            this.uploadingImages.update((images) =>
+                images.map((img) => (img.id === upload.id ? { ...img, progress } : img)),
+            );
+        });
 
-        const previews = this.filePreviews();
-        previews.splice(index, 1);
-        this.filePreviews.set([...previews]);
+        // Update final status
+        this.uploadingImages.update((images) =>
+            images.map((img) => {
+                if (img.id !== upload.id) return img;
+
+                if (error) {
+                    return { ...img, status: 'error' as const, error };
+                }
+                return { ...img, status: 'completed' as const, progress: 100, publicUrl: url! };
+            }),
+        );
+    }
+
+    // Remove an uploading/uploaded image
+    removeFile(uploadId: string) {
+        const upload = this.uploadingImages().find((img) => img.id === uploadId);
+        if (upload) {
+            // Revoke blob URL to free memory
+            this.imageUploadService.revokePreviewUrl(upload.previewUrl);
+        }
+        this.uploadingImages.update((images) => images.filter((img) => img.id !== uploadId));
+    }
+
+    // Retry a failed upload
+    retryUpload(uploadId: string) {
+        const upload = this.uploadingImages().find((img) => img.id === uploadId);
+        if (upload && upload.status === 'error') {
+            // Reset status and restart upload
+            this.uploadingImages.update((images) =>
+                images.map((img) =>
+                    img.id === uploadId ? { ...img, status: 'uploading' as const, progress: 0, error: undefined } : img,
+                ),
+            );
+            this.startUpload(upload);
+        }
     }
 
     // Trigger file input click
@@ -378,10 +445,11 @@ export class AiChat {
 
     sendMessage() {
         const message = this.inputMessage().trim();
-        const dataUrls = this.selectedFileDataUrls();
+        const images = this.completedImageUrls();
 
-        // Need either text or files
-        if ((!message && dataUrls.length === 0) || this.isLoading) return;
+        // Block send if uploads in progress or nothing to send
+        if (this.hasUploadsInProgress()) return;
+        if ((!message && images.length === 0) || this.isLoading) return;
 
         this.inputMessage.set('');
         // Reset textarea height after sending
@@ -389,18 +457,12 @@ export class AiChat {
             this.textareaInput.nativeElement.style.height = 'auto';
         }
 
-        // Build message parts from data URLs
-        // Format: { type: 'file', mediaType: 'image/...', url: 'data:...' }
-        const fileParts = dataUrls.map((dataUrl) => {
-            // Extract mediaType from data URL (e.g., "data:image/jpeg;base64,...")
-            const mediaTypeMatch = dataUrl.match(/^data:([^;]+);/);
-            const mediaType = mediaTypeMatch ? mediaTypeMatch[1] : 'image/jpeg';
-            return {
-                type: 'file' as const,
-                mediaType,
-                url: dataUrl,
-            };
-        });
+        // Build message parts from uploaded URLs (not base64!)
+        const fileParts = images.map(({ url, mediaType }) => ({
+            type: 'file' as const,
+            mediaType,
+            url, // This is now a public URL, not base64
+        }));
 
         // Send message with parts
         // Note: SDK types are limited but do support file parts at runtime
@@ -414,9 +476,11 @@ export class AiChat {
             this.chat.sendMessage({ text: message });
         }
 
-        // Clear files state AFTER sending
-        this.selectedFileDataUrls.set([]);
-        this.filePreviews.set([]);
+        // Cleanup: revoke all blob URLs and clear state
+        this.uploadingImages().forEach((img) => {
+            this.imageUploadService.revokePreviewUrl(img.previewUrl);
+        });
+        this.uploadingImages.set([]);
 
         // Keep the just-sent prompt near the top of the viewport (ChatGPT-like turn framing).
         this.alignNextResponseToTop = true;
@@ -425,9 +489,9 @@ export class AiChat {
         setTimeout(() => {
             let latestUserMessageId: string | null = null;
             for (let i = this.chat.messages.length - 1; i >= 0; i--) {
-                const message = this.chat.messages[i] as UIMessage;
-                if (message.role === 'user') {
-                    latestUserMessageId = message.id;
+                const msg = this.chat.messages[i] as UIMessage;
+                if (msg.role === 'user') {
+                    latestUserMessageId = msg.id;
                     break;
                 }
             }
