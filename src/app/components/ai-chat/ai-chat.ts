@@ -8,6 +8,7 @@ import { ChatContextService } from '../../services/chat-context.service';
 import { ImageUploadService, UploadingImage } from '../../services/image-upload.service';
 import { ChatModeToggle } from './chat-mode-toggle/chat-mode-toggle';
 import { ChatRecipeCard, ChatRecipe } from './chat-recipe-card/chat-recipe-card';
+import { ToolActivityLog, ToolActivity } from './tool-activity-log/tool-activity-log';
 
 // Mobile breakpoint (matches Tailwind's 'md')
 const MOBILE_BREAKPOINT = 768;
@@ -26,7 +27,7 @@ interface ReasoningState {
     selector: 'app-ai-chat',
     templateUrl: './ai-chat.html',
     styleUrl: './ai-chat.scss',
-    imports: [MarkdownComponent, ChatModeToggle, ChatRecipeCard],
+    imports: [MarkdownComponent, ChatModeToggle, ChatRecipeCard, ToolActivityLog],
 })
 export class AiChat {
     @ViewChild('messagesContainer') messagesContainer!: ElementRef;
@@ -288,6 +289,20 @@ export class AiChat {
     // Check if there's any text content in the last assistant message
     get hasTextContent(): boolean {
         return this.lastAssistantMessageParts.some((part) => part.type === 'text' && part.text?.trim().length > 0);
+    }
+
+    // Get all tool activities from the last assistant message for the activity log
+    get currentToolActivities(): ToolActivity[] {
+        return this.lastAssistantMessageParts
+            .filter((part) => part.type?.startsWith('tool-'))
+            .map((part) => ({
+                toolName: part.type.replace('tool-', ''),
+                toolCallId: part.toolCallId || `${part.type}-${Math.random()}`,
+                state: part.state,
+                input: part.input,
+                output: part.output,
+                errorText: part.errorText,
+            }));
     }
 
     // Show pulsing dots immediately when user sends a message, hide when:
