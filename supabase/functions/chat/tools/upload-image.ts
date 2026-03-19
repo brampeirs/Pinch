@@ -2,7 +2,7 @@ import { tool } from 'npm:ai';
 import { SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 import { z } from 'npm:zod';
 
-const uploadImageInputSchema = z.object({
+const chooseCoverImageInputSchema = z.object({
     imageIndex: z
         .number()
         .describe(
@@ -13,24 +13,24 @@ const uploadImageInputSchema = z.object({
         .describe('The purpose of the image: "recipe-cover" for the main recipe photo'),
 });
 
-export function createUploadImageTool(
+export function createChooseCoverImageTool(
     supabase: SupabaseClient,
     availableImages: Array<{ url: string; mediaType: string }> = [],
 ) {
     return tool({
-        description: `Upload an image to permanent storage and get a public URL.
-Use this when the user provides images and you need to store one as a recipe cover photo.
-Images are pre-uploaded to temporary storage. This tool copies them to permanent storage.
+        description: `Choose the best cover image, copy it to permanent storage, and return a public URL.
+Use this when the user provides images and you need to save one as the recipe cover photo.
+Images are pre-uploaded to temporary storage. This tool copies the chosen cover image to permanent storage.
 
 When the user uploads multiple images:
 - Identify which image is the "cover photo" (nicely plated dish, good composition, finished product)
 - vs which is the "recipe source" (text, ingredients list, handwritten notes)
-- Use imageIndex to select which image to upload (0 = first image, 1 = second image, etc.)
+- Use imageIndex to select which image to use as the cover image (0 = first image, 1 = second image, etc.)
 
 Returns the public URL that can be passed to createRecipe as image_url.`,
-        inputSchema: uploadImageInputSchema,
+        inputSchema: chooseCoverImageInputSchema,
         execute: async ({ imageIndex, purpose }) => {
-            console.log('📸 uploadImage called:', { imageIndex, purpose, availableCount: availableImages.length });
+            console.log('🖼️ chooseCoverImage called:', { imageIndex, purpose, availableCount: availableImages.length });
 
             try {
                 // Validate image index
@@ -91,10 +91,10 @@ Returns the public URL that can be passed to createRecipe as image_url.`,
                 return {
                     success: true,
                     url: publicUrl,
-                    message: 'Image uploaded successfully',
+                    message: 'Cover image selected successfully',
                 };
             } catch (error) {
-                console.error('❌ Upload exception:', error);
+                console.error('❌ Cover image selection exception:', error);
                 return {
                     success: false,
                     error: error instanceof Error ? error.message : 'Unknown error',

@@ -1,6 +1,6 @@
 import { Component, signal, computed, ElementRef, ViewChild, effect, inject, HostListener } from '@angular/core';
 import { Chat } from '@ai-sdk/angular';
-import { DefaultChatTransport, type UIMessage } from 'ai';
+import { DefaultChatTransport } from 'ai';
 import { MarkdownComponent } from 'ngx-markdown';
 import { environment } from '../../../environments/environment';
 import { ChatViewModeService } from '../../services/chat-view-mode.service';
@@ -8,7 +8,7 @@ import { ChatContextService } from '../../services/chat-context.service';
 import { ImageUploadService, UploadingImage } from '../../services/image-upload.service';
 import { ChatModeToggle } from './chat-mode-toggle/chat-mode-toggle';
 import { ChatRecipeCard, ChatRecipe } from './chat-recipe-card/chat-recipe-card';
-import { ToolActivityLog, ToolActivity } from './tool-activity-log/tool-activity-log';
+import { ShimmerStatus } from './shimmer-status/shimmer-status';
 
 // Mobile breakpoint (matches Tailwind's 'md')
 const MOBILE_BREAKPOINT = 768;
@@ -16,18 +16,11 @@ const MOBILE_BREAKPOINT = 768;
 // Re-export for backward compatibility
 export type RecipeResult = ChatRecipe;
 
-// Track reasoning state for auto-open/close
-interface ReasoningState {
-    wasStreaming: boolean;
-    isOpen: boolean;
-    autoCloseTimer?: ReturnType<typeof setTimeout>;
-}
-
 @Component({
     selector: 'app-ai-chat',
     templateUrl: './ai-chat.html',
     styleUrl: './ai-chat.scss',
-    imports: [MarkdownComponent, ChatModeToggle, ChatRecipeCard, ToolActivityLog],
+    imports: [MarkdownComponent, ChatModeToggle, ChatRecipeCard, ShimmerStatus],
 })
 export class AiChat {
     @ViewChild('messagesContainer') messagesContainer!: ElementRef;
@@ -85,10 +78,6 @@ export class AiChat {
     private alignNextResponseToTop = false;
     private latestUserMessageId: string | null = null;
 
-    // Track reasoning open/close state per message
-    private reasoningStates = new Map<string, ReasoningState>();
-    private previousReasoningStreaming = new Map<string, boolean>();
-
     @HostListener('window:resize')
     onResize() {
         this.isMobile.set(window.innerWidth < MOBILE_BREAKPOINT);
@@ -115,7 +104,9 @@ export class AiChat {
                 this.updateScrollState();
             }, 40);
 
-            if (!this.isLoading) {
+            const isChatLoading = this.chat.status === 'streaming' || this.chat.status === 'submitted';
+
+            if (!isChatLoading) {
                 this.alignNextResponseToTop = false;
                 this.latestUserMessageId = null;
                 if (this.isNearBottom()) {
@@ -123,226 +114,6 @@ export class AiChat {
                 }
             }
         });
-    }
-
-    // Getters for template binding
-    get messages(): UIMessage[] {
-        // Process reasoning states for auto-open/close
-        this.chat.messages.forEach((msg) => {
-            msg.parts?.forEach((p, partIndex) => {
-                const part = p as any;
-                if (part.type === 'reasoning') {
-                    const key = `${msg.id}-${partIndex}`;
-                    const isStreaming = part.state === 'streaming';
-                    const wasStreaming = this.previousReasoningStreaming.get(key) ?? false;
-
-                    // Initialize state if not exists
-                    if (!this.reasoningStates.has(key)) {
-                        this.reasoningStates.set(key, {
-                            wasStreaming: false,
-                            isOpen: isStreaming, // Start open if streaming
-                        });
-                    }
-
-                    const state = this.reasoningStates.get(key)!;
-
-                    // Auto-open when streaming starts
-                    if (isStreaming && !wasStreaming) {
-                        state.isOpen = true;
-                        state.wasStreaming = true;
-                    }
-
-                    // Auto-close 1 second after streaming ends
-                    if (!isStreaming && wasStreaming && state.isOpen) {
-                        // Clear any existing timer
-                        if (state.autoCloseTimer) {
-                            clearTimeout(state.autoCloseTimer);
-                        }
-                        // Set new auto-close timer
-                        state.autoCloseTimer = setTimeout(() => {
-                            state.isOpen = false;
-                        }, 1000);
-                    }
-
-                    this.previousReasoningStreaming.set(key, isStreaming);
-                }
-            });
-        });
-
-        return this.chat.messages;
-    }
-
-    get isLoading(): boolean {
-        return this.chat.status === 'streaming' || this.chat.status === 'submitted';
-    }
-
-    // Check if we're waiting for an assistant response (last message is from user)
-    private get isWaitingForResponse(): boolean {
-        const messages = this.chat.messages;
-        if (messages.length === 0) return false;
-        const lastMessage = messages[messages.length - 1] as any;
-        return lastMessage.role === 'user';
-    }
-
-    // Get the last assistant message parts for loading state checks
-    // Returns empty array if we're waiting for a new response
-    private get lastAssistantMessageParts(): any[] {
-        // If the last message is from user, we're waiting for a NEW assistant response
-        // so return empty array (no parts yet for the upcoming response)
-        if (this.isWaitingForResponse) {
-            return [];
-        }
-
-        const messages = this.chat.messages;
-        // Find the last assistant message
-        for (let i = messages.length - 1; i >= 0; i--) {
-            if (messages[i].role === 'assistant') {
-                return messages[i].parts ?? [];
-            }
-        }
-        return [];
-    }
-
-    // Check if recipe search tools are currently loading
-    get isRecipeSearchLoading(): boolean {
-        return this.lastAssistantMessageParts.some(
-            (part) =>
-                (part.type === 'tool-optimizeRecipeQuery' || part.type === 'tool-findRecipe') &&
-                (part.state === 'input-streaming' || part.state === 'input-available'),
-        );
-    }
-
-    // Check if optimizeRecipeQuery is currently running (not yet complete)
-    get isOptimizeQueryLoading(): boolean {
-        return this.lastAssistantMessageParts.some(
-            (part) =>
-                part.type === 'tool-optimizeRecipeQuery' &&
-                (part.state === 'input-streaming' || part.state === 'input-available'),
-        );
-    }
-
-    // Check if findRecipe is currently running (not yet complete)
-    get isFindRecipeLoading(): boolean {
-        return this.lastAssistantMessageParts.some(
-            (part) =>
-                part.type === 'tool-findRecipe' &&
-                (part.state === 'input-streaming' || part.state === 'input-available'),
-        );
-    }
-
-    // Check if recipe search flow has started (any tool activity)
-    get isRecipeSearchInProgress(): boolean {
-        return this.lastAssistantMessageParts.some(
-            (part) => part.type === 'tool-optimizeRecipeQuery' || part.type === 'tool-findRecipe',
-        );
-    }
-
-    // Check if createRecipe is active (suppress thinking dots during entire tool lifecycle)
-    get isCreateRecipeInProgress(): boolean {
-        return this.lastAssistantMessageParts.some(
-            (part) =>
-                part.type === 'tool-createRecipe' &&
-                (part.state === 'input-streaming' ||
-                    part.state === 'input-available' ||
-                    part.state === 'output-available'),
-        );
-    }
-
-    // Check if we have recipe search output
-    get hasRecipeSearchOutput(): boolean {
-        return this.lastAssistantMessageParts.some(
-            (part) => part.type === 'tool-findRecipe' && part.state === 'output-available',
-        );
-    }
-
-    // Check if uploadImage tool is active (server-side copying to permanent storage)
-    get isUploadImageInProgress(): boolean {
-        return this.lastAssistantMessageParts.some(
-            (part) =>
-                part.type === 'tool-uploadImage' &&
-                (part.state === 'input-streaming' || part.state === 'input-available'),
-        );
-    }
-
-    // Check if uploadImage has completed
-    get hasUploadImageOutput(): boolean {
-        return this.lastAssistantMessageParts.some(
-            (part) => part.type === 'tool-uploadImage' && part.state === 'output-available',
-        );
-    }
-
-    // Show "Uploading image..." when uploadImage tool is running
-    get showUploadingImage(): boolean {
-        return this.isLoading && this.isUploadImageInProgress && !this.hasUploadImageOutput;
-    }
-
-    // Check if reasoning is currently streaming
-    get isReasoningActive(): boolean {
-        return this.lastAssistantMessageParts.some((part) => part.type === 'reasoning' && part.state === 'streaming');
-    }
-
-    // Check if there's any reasoning part (even if done)
-    get hasReasoning(): boolean {
-        return this.lastAssistantMessageParts.some((part) => part.type === 'reasoning');
-    }
-
-    // Check if there's any text content in the last assistant message
-    get hasTextContent(): boolean {
-        return this.lastAssistantMessageParts.some((part) => part.type === 'text' && part.text?.trim().length > 0);
-    }
-
-    // Get all tool activities from the last assistant message for the activity log
-    get currentToolActivities(): ToolActivity[] {
-        return this.lastAssistantMessageParts
-            .filter((part) => part.type?.startsWith('tool-'))
-            .map((part) => ({
-                toolName: part.type.replace('tool-', ''),
-                toolCallId: part.toolCallId || `${part.type}-${Math.random()}`,
-                state: part.state,
-                input: part.input,
-                output: part.output,
-                errorText: part.errorText,
-            }));
-    }
-
-    // Show pulsing dots immediately when user sends a message, hide when:
-    // - Recipe search starts (show "Preparing/Searching..." instead)
-    // - Reasoning starts (reasoning component shows "Thinking...")
-    // - Text content arrives (content speaks for itself)
-    // - Recipe creation starts (creating card shows its own loading state)
-    // - Upload image starts (show "Uploading image..." instead)
-    get showThinking(): boolean {
-        return (
-            this.isLoading &&
-            !this.isRecipeSearchInProgress &&
-            !this.isCreateRecipeInProgress &&
-            !this.isUploadImageInProgress &&
-            !this.hasReasoning &&
-            !this.hasTextContent
-        );
-    }
-
-    // Show "Preparing search..." when optimizeRecipeQuery is running
-    get showPreparingSearch(): boolean {
-        return this.isLoading && this.isOptimizeQueryLoading && !this.hasRecipeSearchOutput;
-    }
-
-    // Show "Searching recipes..." when findRecipe is running (after optimize is done)
-    get showSearching(): boolean {
-        return (
-            this.isLoading && this.isFindRecipeLoading && !this.isOptimizeQueryLoading && !this.hasRecipeSearchOutput
-        );
-    }
-
-    // Check if any reasoning is currently streaming in a specific message
-    isReasoningStreaming(message: UIMessage): boolean {
-        return message.parts?.some((p: any) => p.type === 'reasoning' && p.state === 'streaming') ?? false;
-    }
-
-    // Check if reasoning is open for a specific part
-    isReasoningOpen(messageId: string, partIndex: number): boolean {
-        const key = `${messageId}-${partIndex}`;
-        return this.reasoningStates.get(key)?.isOpen ?? false;
     }
 
     // Toggle reasoning open/close
@@ -365,6 +136,69 @@ export class AiChat {
             this.viewModeService.setOpen(newValue);
             return newValue;
         });
+    }
+
+    protected shouldShowPendingResponseLoader(isChatLoading: boolean): boolean {
+        if (!isChatLoading) {
+            return false;
+        }
+
+        const lastMessage = this.chat.messages[this.chat.messages.length - 1] as unknown;
+
+        if (!lastMessage || typeof lastMessage !== 'object' || !('role' in lastMessage)) {
+            return false;
+        }
+
+        const role = (lastMessage as { role?: unknown }).role;
+        if (role === 'user') {
+            return true;
+        }
+
+        if (role === 'assistant') {
+            const parts = this.getMessageParts(lastMessage);
+            return !parts.some((part) => this.isVisibleAssistantPart(part));
+        }
+
+        return false;
+    }
+
+    private getMessageParts(message: unknown): unknown[] {
+        if (!message || typeof message !== 'object' || !('parts' in message)) {
+            return [];
+        }
+
+        const parts = (message as { parts?: unknown }).parts;
+        return Array.isArray(parts) ? parts : [];
+    }
+
+    private isVisibleAssistantPart(part: unknown): boolean {
+        if (!part || typeof part !== 'object') {
+            return false;
+        }
+
+        const record = part as { type?: unknown; state?: unknown; text?: unknown };
+        const type = typeof record.type === 'string' ? record.type : undefined;
+        const state = typeof record.state === 'string' ? record.state : undefined;
+        const text = typeof record.text === 'string' ? record.text : '';
+
+        if (type === 'text') {
+            return text.trim().length > 0;
+        }
+
+        if (type === 'reasoning') {
+            return true;
+        }
+
+        if (type === 'tool-findRecipe' || type === 'tool-createRecipe') {
+            return (
+                state === 'input-available' ||
+                state === 'input-streaming' ||
+                state === 'output-available' ||
+                state === 'output-error'
+            );
+        }
+
+        return false;
     }
 
     updateInput(event: Event) {
@@ -464,10 +298,11 @@ export class AiChat {
         const message = this.inputMessage().trim();
         const images = this.completedImageUrls();
         const recipeId = this.chatContextService.contextRecipeId();
+        const isChatLoading = this.chat.status === 'streaming' || this.chat.status === 'submitted';
 
         // Block send if uploads in progress or nothing to send
         if (this.hasUploadsInProgress()) return;
-        if ((!message && images.length === 0) || this.isLoading) return;
+        if ((!message && images.length === 0) || isChatLoading) return;
 
         this.inputMessage.set('');
         // Reset textarea height after sending
@@ -488,10 +323,7 @@ export class AiChat {
         // Send message with parts and body context
         // Note: SDK types are limited but do support file parts at runtime
         if (message && fileParts.length > 0) {
-            this.chat.sendMessage(
-                { parts: [{ type: 'text' as const, text: message }, ...fileParts] as any },
-                { body },
-            );
+            this.chat.sendMessage({ parts: [{ type: 'text' as const, text: message }, ...fileParts] as any }, { body });
         } else if (fileParts.length > 0) {
             this.chat.sendMessage({ parts: fileParts as any }, { body });
         } else {
@@ -511,7 +343,7 @@ export class AiChat {
         setTimeout(() => {
             let latestUserMessageId: string | null = null;
             for (let i = this.chat.messages.length - 1; i >= 0; i--) {
-                const msg = this.chat.messages[i] as UIMessage;
+                const msg = this.chat.messages[i] as { id: string; role: string };
                 if (msg.role === 'user') {
                     latestUserMessageId = msg.id;
                     break;

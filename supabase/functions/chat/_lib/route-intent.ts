@@ -61,7 +61,7 @@ export async function routeIntent(
     const contextPrefix = contextParts.length > 0 ? contextParts.join('\n') + '\n\n' : '';
 
     const { output } = await generateText({
-        model: aiGateway.languageModel('openai/gpt-4o-mini'),
+        model: aiGateway.languageModel('google/gemini-2.5-flash-lite'),
         output: Output.object({ schema: intentSchema }),
         messages: [
             { role: 'system', content: ROUTER_INSTRUCTIONS },
@@ -80,4 +80,3 @@ export async function routeIntent(
     console.log(`🧭 [Router] Intent: ${output.type} (${output.reasoning})`);
     return output;
 }
-

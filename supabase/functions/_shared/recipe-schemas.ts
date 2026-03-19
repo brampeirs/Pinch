@@ -52,7 +52,7 @@ export const recipeToolSchema = z.object({
         .uuid()
         .optional()
         .describe('Category UUID from getCategories tool. Call getCategories first to get available IDs.'),
-    image_url: z.string().url().optional().describe('URL of the recipe cover image (from uploadImage tool)'),
+    image_url: z.string().url().optional().describe('URL of the recipe cover image (from chooseCoverImage tool)'),
     prep_time: z.number().optional().describe('Preparation time in minutes'),
     cook_time: z.number().optional().describe('Cooking time in minutes'),
     servings: z.number().optional().describe('Number of servings'),
@@ -78,7 +78,11 @@ export const createRecipeToolInputSchema = z.object({
                 name: z.string().describe('Ingredient name, e.g. "flour", "butter"'),
                 amount: z.number().optional().nullable().describe('Quantity amount, e.g. 2, 0.5'),
                 unit: z.string().optional().nullable().describe('Unit of measurement, e.g. "cups", "tbsp", "g"'),
-                sort_order: z.number().optional().nullable().describe('Order in the list (auto-assigned if not provided)'),
+                sort_order: z
+                    .number()
+                    .optional()
+                    .nullable()
+                    .describe('Order in the list (auto-assigned if not provided)'),
                 section_name: z
                     .string()
                     .optional()

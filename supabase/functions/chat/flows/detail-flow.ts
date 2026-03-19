@@ -15,10 +15,7 @@ The user is asking about a specific recipe. Answer their questions about it.
 7. Keep answers short and helpful — no filler text.
 `;
 
-function buildDetailPrompt(
-    contextRecipeId: string | null,
-    searchRecipes: { id: string; title: string }[],
-): string {
+function buildDetailPrompt(contextRecipeId: string | null, searchRecipes: { id: string; title: string }[]): string {
     const parts = [DETAIL_PROMPT_BASE];
 
     if (contextRecipeId) {
@@ -27,7 +24,9 @@ function buildDetailPrompt(
 
     if (searchRecipes.length > 0) {
         const list = searchRecipes.map((r, i) => `${i + 1}. "${r.title}" (id: ${r.id})`).join('\n');
-        parts.push(`Recent search results:\n${list}\n\nIf the user refers to one of these (e.g. "the first one", "that soup"), call getRecipeDetail with the matching recipe ID.`);
+        parts.push(
+            `Recent search results:\n${list}\n\nIf the user refers to one of these (e.g. "the first one", "that soup"), call getRecipeDetail with the matching recipe ID.`,
+        );
     }
 
     return parts.join('\n\n');
@@ -48,7 +47,7 @@ export function runDetailFlow(
     messages: ModelMessage[],
 ) {
     return streamText({
-        model: aiGateway.languageModel('openai/gpt-4o'),
+        model: aiGateway.languageModel('openai/gpt-4o-mini'),
         tools: {
             getRecipeDetail: createGetRecipeDetailTool(supabase, contextRecipeId),
         },

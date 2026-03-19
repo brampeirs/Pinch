@@ -1,9 +1,10 @@
 // Chat function v6 - streamText-based flows (no ToolLoopAgent)
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import { createGateway, convertToModelMessages } from 'npm:ai';
+import { convertToModelMessages, createGateway } from 'npm:ai';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { routeIntent } from './_lib/route-intent.ts';
 import { extractSearchRecipes } from './_lib/extract-search-recipes.ts';
+import { isDirectGeneralChat } from './_lib/is-direct-general-chat.ts';
 import { runSearchFlow } from './flows/search-flow.ts';
 import { runDetailFlow } from './flows/detail-flow.ts';
 import { runGeneralChatFlow } from './flows/general-chat-flow.ts';
@@ -74,43 +75,65 @@ Deno.serve(async (req: Request) => {
             console.log(`📋 [Chat] Found ${searchRecipes.length} recipes in search history`);
         }
 
-        // --- Top-level AI router ---
-        const intent = await routeIntent(aiGateway, userText, !!contextRecipeId, images.length > 0, searchRecipes);
-        console.log(`🧭 [Chat] Routed to: ${intent.type}`);
-
-        // --- Switch into the appropriate flow ---
         const modelMessages = await convertToModelMessages(messages);
         let result;
 
-        switch (intent.type) {
-            case 'search': {
-                console.log('🔍 [Chat] Running search flow');
-                result = runSearchFlow(aiGateway, supabase, modelMessages);
-                break;
-            }
+        if (
+            isDirectGeneralChat({
+                userText,
+                hasContextRecipeId: !!contextRecipeId,
+                hasImages: images.length > 0,
+                hasSearchResults: searchRecipes.length > 0,
+            })
+        ) {
+            console.log('⚡ [Chat] Direct general chat fast-path hit');
+            result = runGeneralChatFlow(aiGateway, modelMessages);
+        } else {
+            // --- Top-level AI router ---
+            const intent = await routeIntent(aiGateway, userText, !!contextRecipeId, images.length > 0, searchRecipes);
+            console.log(`🧭 [Chat] Routed to: ${intent.type}`);
 
-            case 'detail': {
-                if (contextRecipeId || searchRecipes.length > 0) {
-                    console.log(`📖 [Chat] Running detail flow (contextRecipeId: ${contextRecipeId || 'none'}, searchRecipes: ${searchRecipes.length})`);
-                    result = runDetailFlow(aiGateway, supabase, contextRecipeId || null, searchRecipes, modelMessages);
-                } else {
-                    console.log('⚠️ [Chat] Detail intent but no recipe to resolve — falling back to generalChat');
-                    result = runGeneralChatFlow(aiGateway, modelMessages);
+            // --- Switch into the appropriate flow ---
+            switch (intent.type) {
+                case 'search': {
+                    console.log('🔍 [Chat] Running search flow');
+                    result = runSearchFlow(aiGateway, supabase, modelMessages);
+                    break;
                 }
-                break;
-            }
 
-            case 'create': {
-                console.log(`✏️ [Chat] Running create flow (images: ${images.length})`);
-                result = runCreateFlow(aiGateway, supabase, modelMessages, images);
-                break;
-            }
+                case 'detail': {
+                    if (contextRecipeId || searchRecipes.length > 0) {
+                        console.log(
+                            `📖 [Chat] Running detail flow (contextRecipeId: ${
+                                contextRecipeId || 'none'
+                            }, searchRecipes: ${searchRecipes.length})`,
+                        );
+                        result = runDetailFlow(
+                            aiGateway,
+                            supabase,
+                            contextRecipeId || null,
+                            searchRecipes,
+                            modelMessages,
+                        );
+                    } else {
+                        console.log('⚠️ [Chat] Detail intent but no recipe to resolve — falling back to generalChat');
+                        result = runGeneralChatFlow(aiGateway, modelMessages);
+                    }
+                    break;
+                }
 
-            case 'generalChat':
-            default: {
-                console.log('💬 [Chat] Running general chat flow');
-                result = runGeneralChatFlow(aiGateway, modelMessages);
-                break;
+                case 'create': {
+                    console.log(`✏️ [Chat] Running create flow (images: ${images.length})`);
+                    result = runCreateFlow(aiGateway, supabase, modelMessages, images);
+                    break;
+                }
+
+                case 'generalChat':
+                default: {
+                    console.log('💬 [Chat] Running general chat flow');
+                    result = runGeneralChatFlow(aiGateway, modelMessages);
+                    break;
+                }
             }
         }
 

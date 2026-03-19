@@ -26,7 +26,7 @@ export function runSearchFlow(
     messages: ModelMessage[],
 ) {
     return streamText({
-        model: aiGateway.languageModel('openai/gpt-4o'),
+        model: aiGateway.languageModel('openai/gpt-4o-mini'),
         tools: {
             findRecipe: createFindRecipeTool(supabase),
         },
@@ -35,4 +35,3 @@ export function runSearchFlow(
         stopWhen: stepCountIs(3),
     });
 }
-

@@ -14,8 +14,8 @@ or asks to create/add a recipe. Extract the recipe information from the user's m
 
 The tool will save the recipe and return the created recipe data for display.
 
-**CRITICAL: If you called uploadImage before this, you MUST include the URL it returned!**
-The uploadImage tool returns: { success: true, url: "https://..." }
+**CRITICAL: If you called chooseCoverImage before this, you MUST include the URL it returned!**
+The chooseCoverImage tool returns: { success: true, url: "https://..." }
 You MUST pass that url value as image_url in the recipe object.
 Example: recipe: { title: "My Recipe", image_url: "https://supabase.co/storage/..." }`,
         inputSchema: createRecipeToolInputSchema,
@@ -43,7 +43,7 @@ Example: recipe: { title: "My Recipe", image_url: "https://supabase.co/storage/.
                     ...recipeWithoutImage,
                     // category_id comes from the model (via getCategories tool) or defaults to "Overig"
                     category_id: recipe.category_id || '24171aa7-5193-44f6-8945-1a5d9bb84bf1',
-                    image_url: image_url, // From uploadImage tool or undefined
+                    image_url: image_url, // From chooseCoverImage tool or undefined
                     is_published: true, // Default to published
                 },
                 ingredients: ingredientsWithOrder,

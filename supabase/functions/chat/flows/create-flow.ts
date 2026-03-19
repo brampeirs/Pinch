@@ -2,7 +2,7 @@ import { streamText, stepCountIs, type ModelMessage } from 'npm:ai';
 import { SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 import { createCreateRecipeTool } from '../tools/create-recipe.ts';
 import { createGetCategoriesTool } from '../tools/get-categories.ts';
-import { createUploadImageTool } from '../tools/upload-image.ts';
+import { createChooseCoverImageTool } from '../tools/upload-image.ts';
 
 const CREATE_PROMPT_BASE = `You are a recipe creation assistant for a cooking app called Pinch.
 Your job is to extract recipe data from the user's message and save it to the database.
@@ -32,28 +32,34 @@ Your job is to extract recipe data from the user's message and save it to the da
 
 function buildCreatePrompt(hasImages: boolean, imageCount: number): string {
     if (!hasImages) {
-        return CREATE_PROMPT_BASE + `\n**WORKFLOW:**
+        return (
+            CREATE_PROMPT_BASE +
+            `\n**WORKFLOW:**
 1. Call getCategories to get available categories.
-2. Call createRecipe with the extracted recipe data and the best matching category_id.`;
+2. Call createRecipe with the extracted recipe data and the best matching category_id.`
+        );
     }
 
-    return CREATE_PROMPT_BASE + `\n**IMAGES:**
+    return (
+        CREATE_PROMPT_BASE +
+        `\n**IMAGES:**
 The user has attached ${imageCount} image(s). Classify each image:
 - **Recipe source** — a photo of text, a screenshot, handwritten notes, a cookbook page. Extract the recipe content from this image.
 - **Cover photo** — a nicely plated dish, appetizing food photo. Upload this as the recipe cover image.
 
 **WORKFLOW WITH IMAGES:**
 1. Call getCategories to get available categories.
-2. If there is a cover photo, call uploadImage to store it permanently (use the imageIndex of the cover photo).
+2. If there is a cover photo, call chooseCoverImage to store it permanently (use the imageIndex of the cover photo).
 3. Extract recipe content from text in the message AND/OR from recipe source images.
-4. Call createRecipe with the extracted data, the best category_id, and the image_url from uploadImage (if available).
+4. Call createRecipe with the extracted data, the best category_id, and the image_url from chooseCoverImage (if available).
 
-**CRITICAL:** If you called uploadImage, you MUST pass its returned URL as image_url in createRecipe.`;
+**CRITICAL:** If you called chooseCoverImage, you MUST pass its returned URL as image_url in createRecipe.`
+    );
 }
 
 /**
  * Runs the create flow: streamText with getCategories + createRecipe tools.
- * When images are present, also includes uploadImage tool.
+ * When images are present, also includes chooseCoverImage
  */
 export function runCreateFlow(
     aiGateway: { languageModel: (model: string) => unknown },
@@ -70,7 +76,8 @@ export function runCreateFlow(
     };
 
     if (hasImages) {
-        tools.uploadImage = createUploadImageTool(supabase, images);
+        const chooseCoverImage = createChooseCoverImageTool(supabase, images);
+        tools.chooseCoverImage = chooseCoverImage;
     }
 
     return streamText({
@@ -78,8 +85,7 @@ export function runCreateFlow(
         tools,
         system: buildCreatePrompt(hasImages, images.length),
         messages,
-        // More steps when images are involved: getCategories → uploadImage → createRecipe → text
+        // More steps when images are involved: getCategories → chooseCoverImage → createRecipe → text
         stopWhen: stepCountIs(hasImages ? 7 : 5),
     });
 }
-

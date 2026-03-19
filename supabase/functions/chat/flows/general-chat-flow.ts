@@ -21,14 +21,10 @@ Answer general cooking questions helpfully and concisely.
 /**
  * Runs the general chat flow: a simple streamText call with no tools.
  */
-export function runGeneralChatFlow(
-    aiGateway: { languageModel: (model: string) => unknown },
-    messages: ModelMessage[],
-) {
+export function runGeneralChatFlow(aiGateway: { languageModel: (model: string) => unknown }, messages: ModelMessage[]) {
     return streamText({
-        model: aiGateway.languageModel('openai/gpt-4o'),
+        model: aiGateway.languageModel('google/gemini-2.5-flash-lite'),
         system: GENERAL_CHAT_PROMPT,
         messages,
     });
 }
-

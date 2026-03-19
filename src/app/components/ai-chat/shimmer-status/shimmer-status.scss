@@ -1,0 +1,64 @@
+:host {
+    display: inline-flex;
+    max-width: 100%;
+}
+
+.status-shimmer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-muted-foreground, #71717a);
+}
+
+.status-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    color: currentColor;
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+.status-icon svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.status-text {
+    color: var(--color-muted-foreground, #71717a);
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+    .status-text {
+        background: linear-gradient(
+            90deg,
+            var(--color-muted-foreground, #71717a) 0%,
+            var(--color-foreground, #0a0a0a) 50%,
+            var(--color-muted-foreground, #71717a) 100%
+        );
+        background-size: 200% 100%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: shimmer 1.5s infinite linear;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .status-text {
+        animation: none;
+        background-position: 50% 0;
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
