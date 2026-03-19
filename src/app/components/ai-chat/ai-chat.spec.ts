@@ -206,6 +206,13 @@ describe('AiChat starter suggestions', () => {
         expect(component.shouldShowSuggestions()).toBe(true);
     });
 
+    it('hides suggestions when a recipe detail context is active', () => {
+        TestBed.inject(ChatContextService).setRecipeContext('recipe-1', 'Creamy Tomato Pasta');
+        setMessages([{ id: 'welcome', role: 'assistant', parts: [{ type: 'text', text: 'Hello!' }] }]);
+
+        expect(component.shouldShowSuggestions()).toBe(false);
+    });
+
     it('hides suggestions after the user has sent a message', () => {
         setMessages([
             { id: 'welcome', role: 'assistant', parts: [{ type: 'text', text: 'Hello!' }] },
@@ -279,7 +286,7 @@ describe('AiChat starter suggestions', () => {
         expect(chat.messages).toHaveLength(1);
         expect(chat.messages[0]?.id).toBe('welcome');
         expect(chat.messages[0]?.role).toBe('assistant');
-        expect(component.shouldShowSuggestions()).toBe(true);
+        expect(component.shouldShowSuggestions()).toBe(false);
     });
 });
 

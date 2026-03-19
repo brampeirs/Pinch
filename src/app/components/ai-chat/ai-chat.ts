@@ -131,6 +131,7 @@ export class AiChat {
     inputMessage = signal('');
     autoScrollEnabled = signal(true);
     showJumpToLatest = signal(false);
+    hasHiddenStarterSuggestions = signal(false);
 
     // Mobile detection
     isMobile = signal(typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT);
@@ -216,6 +217,7 @@ export class AiChat {
 
         this.chat.stop();
         this.inputMessage.set('');
+        this.hasHiddenStarterSuggestions.set(true);
         this.clearUploads();
         this.resetComposerUi();
 
@@ -298,6 +300,14 @@ export class AiChat {
     }
 
     shouldShowSuggestions(): boolean {
+        if (this.activeRecipeContext()) {
+            return false;
+        }
+
+        if (this.hasHiddenStarterSuggestions()) {
+            return false;
+        }
+
         if (this.inputMessage().trim().length > 0) {
             return false;
         }
