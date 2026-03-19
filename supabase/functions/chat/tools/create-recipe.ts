@@ -24,7 +24,6 @@ Example: recipe: { title: "My Recipe", image_url: "https://supabase.co/storage/.
                 '📝 createRecipe called:',
                 JSON.stringify({
                     title: recipe.title,
-                    category_id: recipe.category_id,
                     image_url: recipe.image_url ?? 'NOT PROVIDED',
                     ingredientCount: ingredients.length,
                     stepCount: steps.length,
@@ -42,6 +41,7 @@ Example: recipe: { title: "My Recipe", image_url: "https://supabase.co/storage/.
             const payload = {
                 recipe: {
                     ...recipeWithoutImage,
+                    category_id: '24171aa7-5193-44f6-8945-1a5d9bb84bf1',
                     // category_id is already a UUID from getCategories tool
                     image_url: image_url, // From uploadImage tool or undefined
                     is_published: true, // Default to published
@@ -87,7 +87,6 @@ Example: recipe: { title: "My Recipe", image_url: "https://supabase.co/storage/.
                     title: data.data?.title,
                     description: data.data?.description,
                     imageUrl: data.data?.image_url,
-                    categoryName: data.data?.category_name,
                     prepTime: data.data?.prep_time,
                     cookTime: data.data?.cook_time,
                     servings: data.data?.servings,

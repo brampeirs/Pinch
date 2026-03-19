@@ -140,7 +140,6 @@ function createRequestScopedAgent(
             findRecipe: createFindRecipeTool(supabase),
             createRecipe: createCreateRecipeTool(supabase),
             uploadImage: createUploadImageTool(supabase, images),
-            getCategories: createGetCategoriesTool(supabase),
             getRecipeDetail: createGetRecipeDetailTool(supabase, contextRecipeId),
         },
         instructions: AGENT_INSTRUCTIONS,
