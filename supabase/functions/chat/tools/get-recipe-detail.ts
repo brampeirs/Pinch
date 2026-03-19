@@ -2,19 +2,7 @@ import { tool } from 'npm:ai';
 import { z } from 'npm:zod';
 import { SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 
-// Module-level context storage (similar to how images are handled)
-let currentContextRecipeId: string | null = null;
-
-export function setContextRecipeId(recipeId: string | null) {
-    currentContextRecipeId = recipeId;
-    console.log('📍 Context recipe ID set to:', recipeId);
-}
-
-export function getContextRecipeId(): string | null {
-    return currentContextRecipeId;
-}
-
-export function createGetRecipeDetailTool(supabase: SupabaseClient) {
+export function createGetRecipeDetailTool(supabase: SupabaseClient, contextRecipeId: string | null = null) {
     return tool({
         description: `Get full details for a specific recipe by ID.
 Use this when the user asks for more information about a specific recipe,
@@ -28,8 +16,8 @@ Returns the complete recipe with all ingredients and preparation steps.`,
                 .describe('The UUID of the recipe to retrieve. Pass an empty string to use the context recipe.'),
         }),
         execute: async ({ recipeId }) => {
-            // Use provided recipeId, or fall back to module-level context (empty string means use context)
-            const targetRecipeId = recipeId && recipeId.trim() !== '' ? recipeId : currentContextRecipeId;
+            // Use provided recipeId, or fall back to request-scoped context (empty string means use context)
+            const targetRecipeId = recipeId && recipeId.trim() !== '' ? recipeId : contextRecipeId;
 
             console.log('📖 getRecipeDetail called with recipeId:', recipeId, 'using targetRecipeId:', targetRecipeId);
 

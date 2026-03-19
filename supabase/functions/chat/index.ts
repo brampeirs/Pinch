@@ -1,12 +1,12 @@
-// Chat function v3 - fixed schema issues for getCategories and getRecipeDetail
+// Chat function v4 - request-scoped runtime (no shared mutable state)
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { ToolLoopAgent, stepCountIs, createAgentUIStreamResponse, createGateway } from 'npm:ai';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { createFindRecipeTool } from './tools/find-recipe.ts';
 import { createCreateRecipeTool } from './tools/create-recipe.ts';
-import { createUploadImageTool, setAvailableImages } from './tools/upload-image.ts';
+import { createUploadImageTool } from './tools/upload-image.ts';
 import { createGetCategoriesTool } from './tools/get-categories.ts';
-import { createGetRecipeDetailTool, setContextRecipeId } from './tools/get-recipe-detail.ts';
+import { createGetRecipeDetailTool } from './tools/get-recipe-detail.ts';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -118,46 +118,34 @@ When user says "tell me more about the first one" or similar:
 Common tags: quick, vegetarian, vegan, spicy, comfort food, healthy
 `;
 
-// Lazy initialization - only created on first POST request
-let recipeAgent: ToolLoopAgent | null = null;
+// Shared infrastructure — safe to reuse across requests (stateless)
+const aiGatewayApiKey = Deno.env.get('AI_GATEWAY_API_KEY');
+if (!aiGatewayApiKey) {
+    throw new Error('AI_GATEWAY_API_KEY is not set');
+}
+const aiGateway = createGateway({ apiKey: aiGatewayApiKey });
 
-function getRecipeAgent(): ToolLoopAgent {
-    if (recipeAgent) return recipeAgent;
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Initialize AI Gateway
-    const aiGatewayApiKey = Deno.env.get('AI_GATEWAY_API_KEY');
-    if (!aiGatewayApiKey) {
-        throw new Error('AI_GATEWAY_API_KEY is not set');
-    }
-    const aiGateway = createGateway({ apiKey: aiGatewayApiKey });
-
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Initialize tools
-    const findRecipeTool = createFindRecipeTool(supabase);
-    const createRecipeTool = createCreateRecipeTool(supabase);
-    const uploadImageTool = createUploadImageTool(supabase);
-    const getCategoriesTool = createGetCategoriesTool(supabase);
-    const getRecipeDetailTool = createGetRecipeDetailTool(supabase);
-
-    // Create the ToolLoopAgent
-    recipeAgent = new ToolLoopAgent({
+/** Build a fresh agent with request-scoped tool state. */
+function createRequestScopedAgent(
+    contextRecipeId: string | null,
+    images: Array<{ url: string; mediaType: string }>,
+): ToolLoopAgent {
+    return new ToolLoopAgent({
         model: aiGateway.languageModel('openai/gpt-4o'),
         tools: {
-            findRecipe: findRecipeTool,
-            createRecipe: createRecipeTool,
-            uploadImage: uploadImageTool,
-            getCategories: getCategoriesTool,
-            getRecipeDetail: getRecipeDetailTool,
+            findRecipe: createFindRecipeTool(supabase),
+            createRecipe: createCreateRecipeTool(supabase),
+            uploadImage: createUploadImageTool(supabase, images),
+            getCategories: createGetCategoriesTool(supabase),
+            getRecipeDetail: createGetRecipeDetailTool(supabase, contextRecipeId),
         },
         instructions: AGENT_INSTRUCTIONS,
         stopWhen: stepCountIs(15),
     });
-
-    return recipeAgent;
 }
 
 Deno.serve(async (req: Request) => {
@@ -174,14 +162,11 @@ Deno.serve(async (req: Request) => {
         const body = await req.json();
         const { messages, contextRecipeId } = body;
 
-        // Set the context recipe ID for tools to use
-        setContextRecipeId(contextRecipeId || null);
-
         if (contextRecipeId) {
             console.log(`📍 [Chat] Context recipe ID: ${contextRecipeId}`);
         }
 
-        // Extract images from the last user message and make them available to tools
+        // Extract images from the last user message (request-scoped)
         const lastUserMessage = [...messages].reverse().find((m: { role: string }) => m.role === 'user');
         const images: Array<{ url: string; mediaType: string }> = [];
         if (lastUserMessage?.parts) {
@@ -193,14 +178,6 @@ Deno.serve(async (req: Request) => {
         }
         if (images.length > 0) {
             console.log(`📷 [Chat] Found ${images.length} images in user message`);
-            setAvailableImages(images);
-        }
-
-        const agent = getRecipeAgent();
-        console.log('🤖 [Chat] Agent initialized, starting stream...');
-
-        // Debug: Log what images we have
-        if (images.length > 0) {
             for (let i = 0; i < images.length; i++) {
                 const img = images[i];
                 console.log(
@@ -208,6 +185,10 @@ Deno.serve(async (req: Request) => {
                 );
             }
         }
+
+        // Create a fresh agent with request-scoped state — no cross-request leaks
+        const agent = createRequestScopedAgent(contextRecipeId || null, images);
+        console.log('🤖 [Chat] Request-scoped agent created, starting stream...');
 
         const response = await createAgentUIStreamResponse({
             agent,

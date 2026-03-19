@@ -13,15 +13,10 @@ const uploadImageInputSchema = z.object({
         .describe('The purpose of the image: "recipe-cover" for the main recipe photo'),
 });
 
-// Store for images extracted from messages - now contains public URLs (not data URLs)
-let availableImages: Array<{ url: string; mediaType: string }> = [];
-
-export function setAvailableImages(images: Array<{ url: string; mediaType: string }>) {
-    availableImages = images;
-    console.log(`📷 Set ${images.length} available images for upload`);
-}
-
-export function createUploadImageTool(supabase: SupabaseClient) {
+export function createUploadImageTool(
+    supabase: SupabaseClient,
+    availableImages: Array<{ url: string; mediaType: string }> = [],
+) {
     return tool({
         description: `Upload an image to permanent storage and get a public URL.
 Use this when the user provides images and you need to store one as a recipe cover photo.
