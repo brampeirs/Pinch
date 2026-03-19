@@ -1,113 +1,64 @@
-<main class="min-h-screen bg-gradient-to-b from-slate-50 to-white py-12">
-    <div class="mx-auto max-w-2xl px-6">
-        <!-- Header -->
-        <div class="mb-8">
-            <a routerLink="/" class="mb-4 inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-                Back
-            </a>
-            <h1 class="text-3xl font-bold text-slate-900">
-                @if (isEditMode()) {
-                    Edit recipe
+<main class="min-h-screen bg-white">
+    <form (ngSubmit)="saveRecipe()">
+        <section class="relative overflow-hidden bg-slate-900">
+            <div class="absolute inset-0">
+                @if (imagePreview()) {
+                    <img
+                        [src]="imagePreview()"
+                        alt="Recipe cover preview"
+                        class="h-full w-full object-cover opacity-70"
+                    />
                 } @else {
-                    New recipe
+                    <div
+                        class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(129,140,248,0.45),_transparent_32%),linear-gradient(135deg,_#0f172a,_#1e1b4b_55%,_#312e81)]"
+                    ></div>
+                    <div class="absolute inset-x-0 top-24 flex justify-center">
+                        <div class="rounded-full border border-white/15 bg-white/10 p-6 text-5xl backdrop-blur-sm">
+                            🍽️
+                        </div>
+                    </div>
                 }
-            </h1>
-            <p class="mt-2 text-slate-600">
-                @if (isEditMode()) {
-                    Update your recipe
-                } @else {
-                    Share your favorite recipe with the world
-                }
-            </p>
-        </div>
-
-        <!-- Error message -->
-        @if (error()) {
-            <div class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
-                {{ error() }}
             </div>
-        }
 
-        <!-- Form -->
-        <form (ngSubmit)="saveRecipe()" class="space-y-8">
-            <!-- Basic Info -->
-            <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 class="mb-4 text-lg font-semibold text-slate-900">Basic information</h2>
+            <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/75 to-slate-900/35"></div>
 
-                <div class="space-y-4">
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Title *</label>
-                        <input
-                            type="text"
-                            [ngModel]="title()"
-                            (ngModelChange)="title.set($event)"
-                            name="title"
-                            placeholder="E.g. Pasta Carbonara"
-                            class="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                        />
-                    </div>
+            <div class="relative mx-auto flex min-h-[28rem] max-w-6xl flex-col px-6 pb-10 pt-8">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <a
+                        [routerLink]="backLink()"
+                        class="inline-flex items-center gap-2 self-start rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        {{ backLabel() }}
+                    </a>
 
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Description</label>
-                        <textarea
-                            [ngModel]="description()"
-                            (ngModelChange)="description.set($event)"
-                            name="description"
-                            rows="3"
-                            placeholder="Short description of the dish..."
-                            class="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                        ></textarea>
-                    </div>
-
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Category</label>
-                        <select
-                            [ngModel]="categoryId()"
-                            (ngModelChange)="categoryId.set($event)"
-                            name="categoryId"
-                            class="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                    <div class="flex flex-wrap gap-3">
+                        <label
+                            for="cover-image-upload"
+                            class="inline-flex cursor-pointer items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-lg shadow-slate-900/20 transition-transform hover:-translate-y-0.5"
+                            [class.pointer-events-none]="uploadingImage()"
+                            [class.opacity-70]="uploadingImage()"
                         >
-                            <option value="">Choose a category</option>
-                            @for (cat of categories(); track cat.id) {
-                                <option [value]="cat.id">{{ cat.emoji }} {{ cat.name }}</option>
-                            }
-                        </select>
-                    </div>
-
-                    <!-- Image Upload -->
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-slate-700">Image</label>
-                        @if (imagePreview()) {
-                            <div class="relative">
-                                <img [src]="imagePreview()" alt="Preview" class="h-48 w-full rounded-xl object-cover" />
-                                <button
-                                    type="button"
-                                    (click)="removeImage()"
-                                    class="absolute right-2 top-2 rounded-full bg-red-500 p-1.5 text-white shadow-lg hover:bg-red-600"
-                                >
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M6 18L18 6M6 6l12 12"
-                                        />
-                                    </svg>
-                                </button>
-                            </div>
-                        } @else {
-                            <label
-                                class="flex h-48 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 transition-colors hover:border-indigo-400 hover:bg-indigo-50"
-                            >
-                                <svg
-                                    class="mb-2 h-10 w-10 text-slate-400"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
+                            @if (uploadingImage()) {
+                                <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle
+                                        class="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        stroke-width="4"
+                                    ></circle>
+                                    <path
+                                        class="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                                    ></path>
+                                </svg>
+                            } @else {
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path
                                         stroke-linecap="round"
                                         stroke-linejoin="round"
@@ -115,303 +66,472 @@
                                         d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                                     />
                                 </svg>
-                                <span class="text-sm font-medium text-slate-600">Click to upload an image</span>
-                                <span class="mt-1 text-xs text-slate-400">JPG, PNG, WebP or GIF (max 5MB)</span>
-                                <input
-                                    type="file"
-                                    (change)="onImageSelected($event)"
-                                    accept="image/jpeg,image/png,image/webp,image/gif"
-                                    class="hidden"
-                                />
-                            </label>
+                            }
+                            {{ coverButtonLabel() }}
+                        </label>
+                        <input
+                            id="cover-image-upload"
+                            type="file"
+                            (change)="onImageSelected($event)"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            class="hidden"
+                        />
+
+                        @if (imagePreview()) {
+                            <button
+                                type="button"
+                                (click)="removeImage()"
+                                class="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
+                                </svg>
+                                Remove image
+                            </button>
                         }
                     </div>
+                </div>
 
-                    <div class="grid grid-cols-3 gap-4">
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Prep time (min)</label>
+                <div class="mt-auto max-w-5xl">
+                    <div class="mb-5 flex flex-wrap items-center gap-3 text-sm">
+                        <span class="rounded-full bg-white/15 px-3 py-1 font-medium text-white backdrop-blur-sm"
+                            >Recipe editor</span
+                        >
+
+                        <div class="relative">
+                            <label for="recipe-category" class="sr-only">Category</label>
+                            <select
+                                id="recipe-category"
+                                [ngModel]="categoryId()"
+                                (ngModelChange)="categoryId.set($event)"
+                                name="categoryId"
+                                class="appearance-none rounded-full border border-white/10 bg-white/10 px-4 py-2 pr-10 text-sm font-medium text-white outline-none backdrop-blur-sm transition-colors focus:border-white/40 focus:bg-white/15 focus:ring-2 focus:ring-white/30"
+                            >
+                                <option value="" class="text-slate-900">Choose a category</option>
+                                @for (cat of categories(); track cat.id) {
+                                    <option [value]="cat.id" class="text-slate-900">
+                                        {{ cat.emoji }} {{ cat.name }}
+                                    </option>
+                                }
+                            </select>
+                            <svg
+                                class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/70"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M19 9l-7 7-7-7"
+                                />
+                            </svg>
+                        </div>
+
+                        <div
+                            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 text-white/90 backdrop-blur-sm"
+                        >
+                            <label
+                                for="recipe-prep-time"
+                                class="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/65"
+                            >
+                                Prep
+                            </label>
                             <input
+                                id="recipe-prep-time"
                                 type="number"
                                 [ngModel]="prepTime()"
                                 (ngModelChange)="prepTime.set($event)"
                                 name="prepTime"
                                 min="0"
                                 placeholder="15"
-                                class="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                                class="w-12 border-0 bg-transparent p-0 text-sm font-medium text-white outline-none placeholder:text-white/55"
                             />
+                            <span class="text-xs text-white/60">min</span>
                         </div>
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Cook time (min)</label>
+
+                        <div
+                            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 text-white/90 backdrop-blur-sm"
+                        >
+                            <label
+                                for="recipe-cook-time"
+                                class="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/65"
+                            >
+                                Cook
+                            </label>
                             <input
+                                id="recipe-cook-time"
                                 type="number"
                                 [ngModel]="cookTime()"
                                 (ngModelChange)="cookTime.set($event)"
                                 name="cookTime"
                                 min="0"
                                 placeholder="30"
-                                class="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                                class="w-12 border-0 bg-transparent p-0 text-sm font-medium text-white outline-none placeholder:text-white/55"
                             />
+                            <span class="text-xs text-white/60">min</span>
                         </div>
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-slate-700">Servings</label>
+
+                        <div
+                            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 text-white/90 backdrop-blur-sm"
+                        >
+                            <label
+                                for="recipe-servings"
+                                class="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/65"
+                            >
+                                Serves
+                            </label>
                             <input
+                                id="recipe-servings"
                                 type="number"
                                 [ngModel]="servings()"
                                 (ngModelChange)="servings.set($event)"
                                 name="servings"
                                 min="1"
                                 placeholder="4"
-                                class="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                                class="w-10 border-0 bg-transparent p-0 text-sm font-medium text-white outline-none placeholder:text-white/55"
                             />
                         </div>
                     </div>
-                </div>
-            </section>
 
-            <!-- Ingredients -->
-            <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div class="mb-4 flex items-center justify-between">
-                    <h2 class="text-lg font-semibold text-slate-900">Ingredients *</h2>
-                    <button
-                        type="button"
-                        (click)="addIngredient()"
-                        class="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200"
-                    >
-                        + Add
-                    </button>
-                </div>
+                    <label for="recipe-title-hero" class="sr-only">Title</label>
+                    <input
+                        id="recipe-title-hero"
+                        type="text"
+                        [ngModel]="title()"
+                        (ngModelChange)="title.set($event)"
+                        name="title"
+                        [placeholder]="displayTitle()"
+                        class="w-full rounded-3xl border border-white/10 bg-white/10 px-5 py-4 text-4xl font-bold tracking-tight text-white outline-none backdrop-blur-sm transition-colors placeholder:text-white/70 focus:border-white/40 focus:bg-white/15 focus:ring-2 focus:ring-white/40 sm:text-5xl lg:text-6xl"
+                    />
 
-                <!-- AI Parser -->
-                <div class="mb-4 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
-                    <div class="mb-2 flex items-center gap-2">
-                        <svg class="h-5 w-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M13 10V3L4 14h7v7l9-11h-7z"
-                            />
-                        </svg>
-                        <span class="text-sm font-medium text-indigo-900">Paste & Parse with AI</span>
-                    </div>
+                    <label for="recipe-description" class="sr-only">Description</label>
                     <textarea
-                        [ngModel]="rawIngredientsText()"
-                        (ngModelChange)="rawIngredientsText.set($event)"
-                        name="rawIngredients"
-                        rows="3"
-                        placeholder="Paste ingredients here...&#10;E.g:&#10;500g pasta&#10;2 eggs&#10;100g parmesan"
-                        class="mb-2 w-full rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
+                        id="recipe-description"
+                        [ngModel]="description()"
+                        (ngModelChange)="description.set($event)"
+                        name="description"
+                        rows="2"
+                        [placeholder]="displayDescription()"
+                        class="mt-4 w-full max-w-3xl rounded-3xl border border-white/10 bg-white/10 px-4 py-3 text-base leading-7 text-slate-200 outline-none backdrop-blur-sm transition-colors placeholder:text-slate-200/75 focus:border-white/40 focus:bg-white/15 focus:ring-2 focus:ring-white/30 sm:text-lg"
                     ></textarea>
-                    <button
-                        type="button"
-                        (click)="parseIngredients()"
-                        [disabled]="parsingIngredients() || !rawIngredientsText().trim()"
-                        class="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                </div>
+            </div>
+        </section>
+
+        <section class="mx-auto max-w-6xl px-6 pt-8">
+            @if (error()) {
+                <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 shadow-sm">
+                    {{ error() }}
+                </div>
+            }
+        </section>
+
+        <section class="mx-auto max-w-6xl px-6 py-10">
+            <section>
+                <div class="mb-5 max-w-2xl">
+                    <span
+                        class="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-indigo-700"
                     >
-                        @if (parsingIngredients()) {
-                            <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                <circle
-                                    class="opacity-25"
-                                    cx="12"
-                                    cy="12"
-                                    r="10"
-                                    stroke="currentColor"
-                                    stroke-width="4"
-                                ></circle>
-                                <path
-                                    class="opacity-75"
-                                    fill="currentColor"
-                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                                ></path>
-                            </svg>
-                            Parsing...
-                        } @else {
-                            ✨ Parse ingredients
-                        }
-                    </button>
+                        Ingredients
+                    </span>
+                    <h2 class="mt-4 text-2xl font-bold tracking-tight text-slate-900">
+                        Paste on the left, refine on the right
+                    </h2>
+                    <p class="mt-2 text-slate-600">
+                        Parse the raw list, then immediately clean it up in the manual editor beside it.
+                    </p>
                 </div>
 
-                <div class="space-y-3">
-                    @for (ingredient of ingredients(); track $index; let i = $index) {
-                        <div class="space-y-1">
-                            @if (ingredient.section_name) {
-                                @if (i === 0 || ingredients()[i - 1].section_name !== ingredient.section_name) {
-                                    <div
-                                        class="mb-2 mt-3 text-xs font-semibold uppercase tracking-wide text-indigo-600"
-                                    >
-                                        {{ ingredient.section_name }}
-                                    </div>
-                                }
-                            }
-                            <div class="flex items-center gap-3">
-                                <input
-                                    type="number"
-                                    [ngModel]="ingredient.amount"
-                                    (ngModelChange)="updateIngredient(i, 'amount', $event)"
-                                    [name]="'ing-amount-' + i"
-                                    placeholder="Amount"
-                                    min="0"
-                                    step="0.1"
-                                    class="w-20 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
-                                />
-                                <input
-                                    type="text"
-                                    [ngModel]="ingredient.unit"
-                                    (ngModelChange)="updateIngredient(i, 'unit', $event)"
-                                    [name]="'ing-unit-' + i"
-                                    placeholder="Unit"
-                                    class="w-24 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
-                                />
-                                <input
-                                    type="text"
-                                    [ngModel]="ingredient.name"
-                                    (ngModelChange)="updateIngredient(i, 'name', $event)"
-                                    [name]="'ing-name-' + i"
-                                    placeholder="Ingredient (e.g. pasta)"
-                                    class="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
-                                />
-                                @if (ingredients().length > 1) {
-                                    <button
-                                        type="button"
-                                        (click)="removeIngredient(i)"
-                                        class="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500"
-                                    >
-                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M6 18L18 6M6 6l12 12"
-                                            />
-                                        </svg>
-                                    </button>
-                                }
-                            </div>
+                <div class="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] xl:items-start">
+                    <section
+                        class="rounded-[2rem] border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-slate-50 p-6 shadow-sm"
+                    >
+                        <div class="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                            <span class="text-lg">🥕</span>
+                            Ingredients paste
                         </div>
-                    }
+                        <p class="mb-4 text-sm leading-6 text-slate-600">
+                            Paste ingredients and let AI map amounts, units, and section names.
+                        </p>
+                        <textarea
+                            [ngModel]="rawIngredientsText()"
+                            (ngModelChange)="rawIngredientsText.set($event)"
+                            name="rawIngredients"
+                            rows="10"
+                            placeholder="500g pasta&#10;2 eggs&#10;100g parmesan&#10;Fresh black pepper"
+                            class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                        ></textarea>
+                        <button
+                            type="button"
+                            (click)="parseIngredients()"
+                            [disabled]="parsingIngredients() || !rawIngredientsText().trim()"
+                            class="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            @if (parsingIngredients()) {
+                                <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle
+                                        class="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        stroke-width="4"
+                                    ></circle>
+                                    <path
+                                        class="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                                    ></path>
+                                </svg>
+                                Parsing ingredients...
+                            } @else {
+                                ✨ Parse ingredients
+                            }
+                        </button>
+                    </section>
+
+                    <section class="rounded-[2rem] bg-slate-50 p-6 ring-1 ring-slate-200">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900">Ingredients *</h3>
+                                <p class="mt-1 text-sm leading-6 text-slate-600">
+                                    Refine the parsed ingredients or add them manually.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                (click)="addIngredient()"
+                                class="shrink-0 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+                            >
+                                + Add
+                            </button>
+                        </div>
+
+                        <div class="mt-6 space-y-3">
+                            @for (ingredient of ingredients(); track $index; let i = $index) {
+                                <div class="space-y-2 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200/80">
+                                    @if (ingredient.section_name) {
+                                        @if (i === 0 || ingredients()[i - 1].section_name !== ingredient.section_name) {
+                                            <div
+                                                class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600"
+                                            >
+                                                {{ ingredient.section_name }}
+                                            </div>
+                                        }
+                                    }
+
+                                    <div class="grid gap-3 sm:grid-cols-[72px_84px_minmax(0,1fr)_auto] sm:items-center">
+                                        <input
+                                            type="number"
+                                            [ngModel]="ingredient.amount"
+                                            (ngModelChange)="updateIngredient(i, 'amount', $event)"
+                                            [name]="'ing-amount-' + i"
+                                            placeholder="Amt"
+                                            min="0"
+                                            step="0.1"
+                                            class="rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                                        />
+                                        <input
+                                            type="text"
+                                            [ngModel]="ingredient.unit"
+                                            (ngModelChange)="updateIngredient(i, 'unit', $event)"
+                                            [name]="'ing-unit-' + i"
+                                            placeholder="Unit"
+                                            class="rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                                        />
+                                        <input
+                                            type="text"
+                                            [ngModel]="ingredient.name"
+                                            (ngModelChange)="updateIngredient(i, 'name', $event)"
+                                            [name]="'ing-name-' + i"
+                                            placeholder="Ingredient"
+                                            class="rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                                        />
+                                        @if (ingredients().length > 1) {
+                                            <button
+                                                type="button"
+                                                (click)="removeIngredient(i)"
+                                                class="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                                                aria-label="Remove ingredient"
+                                            >
+                                                <svg
+                                                    class="h-5 w-5"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M6 18L18 6M6 6l12 12"
+                                                    />
+                                                </svg>
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </section>
                 </div>
             </section>
 
-            <!-- Steps -->
-            <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div class="mb-4 flex items-center justify-between">
-                    <h2 class="text-lg font-semibold text-slate-900">Preparation steps *</h2>
-                    <button
-                        type="button"
-                        (click)="addStep()"
-                        class="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200"
+            <section class="mt-10">
+                <div class="mb-5 max-w-2xl">
+                    <span
+                        class="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700"
                     >
-                        + Add
-                    </button>
+                        Instructions
+                    </span>
+                    <h2 class="mt-4 text-2xl font-bold tracking-tight text-slate-900">
+                        Parse the flow, then polish the steps
+                    </h2>
+                    <p class="mt-2 text-slate-600">
+                        Keep the raw instructions visible while you refine the final step-by-step version beside them.
+                    </p>
                 </div>
 
-                <!-- AI Parser -->
-                <div class="mb-4 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
-                    <div class="mb-2 flex items-center gap-2">
-                        <svg class="h-5 w-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M13 10V3L4 14h7v7l9-11h-7z"
-                            />
-                        </svg>
-                        <span class="text-sm font-medium text-indigo-900">Paste & Parse with AI</span>
-                    </div>
-                    <textarea
-                        [ngModel]="rawStepsText()"
-                        (ngModelChange)="rawStepsText.set($event)"
-                        name="rawSteps"
-                        rows="4"
-                        placeholder="Paste preparation steps here...&#10;E.g:&#10;Cook the pasta in salted water. Beat the eggs with the cheese. Mix everything together and serve immediately."
-                        class="mb-2 w-full rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
-                    ></textarea>
-                    <button
-                        type="button"
-                        (click)="parseSteps()"
-                        [disabled]="parsingSteps() || !rawStepsText().trim()"
-                        class="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                <div class="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] xl:items-start">
+                    <section
+                        class="rounded-[2rem] border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-slate-50 p-6 shadow-sm"
                     >
-                        @if (parsingSteps()) {
-                            <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                <circle
-                                    class="opacity-25"
-                                    cx="12"
-                                    cy="12"
-                                    r="10"
-                                    stroke="currentColor"
-                                    stroke-width="4"
-                                ></circle>
-                                <path
-                                    class="opacity-75"
-                                    fill="currentColor"
-                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                                ></path>
-                            </svg>
-                            Parsing...
-                        } @else {
-                            ✨ Parse steps
-                        }
-                    </button>
-                </div>
-
-                <div class="space-y-3">
-                    @for (step of steps(); track $index; let i = $index) {
-                        <div class="space-y-1">
-                            @if (step.section_name) {
-                                @if (i === 0 || steps()[i - 1].section_name !== step.section_name) {
-                                    <div
-                                        class="mb-2 mt-3 text-xs font-semibold uppercase tracking-wide text-indigo-600"
-                                    >
-                                        {{ step.section_name }}
-                                    </div>
-                                }
-                            }
-                            <div class="flex items-start gap-3">
-                                <span
-                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-600"
-                                >
-                                    {{ i + 1 }}
-                                </span>
-                                <textarea
-                                    [ngModel]="step.description"
-                                    (ngModelChange)="updateStep(i, $event)"
-                                    [name]="'step-' + i"
-                                    rows="2"
-                                    placeholder="Describe this step..."
-                                    class="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-indigo-500"
-                                ></textarea>
-                                @if (steps().length > 1) {
-                                    <button
-                                        type="button"
-                                        (click)="removeStep(i)"
-                                        class="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500"
-                                    >
-                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M6 18L18 6M6 6l12 12"
-                                            />
-                                        </svg>
-                                    </button>
-                                }
-                            </div>
+                        <div class="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                            <span class="text-lg">📝</span>
+                            Instructions paste
                         </div>
-                    }
+                        <p class="mb-4 text-sm leading-6 text-slate-600">
+                            Paste the preparation text and let AI split it into clean, editable steps.
+                        </p>
+                        <textarea
+                            [ngModel]="rawStepsText()"
+                            (ngModelChange)="rawStepsText.set($event)"
+                            name="rawSteps"
+                            rows="10"
+                            placeholder="Cook the pasta in salted water. Beat the eggs with the cheese. Combine everything off the heat and serve immediately."
+                            class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                        ></textarea>
+                        <button
+                            type="button"
+                            (click)="parseSteps()"
+                            [disabled]="parsingSteps() || !rawStepsText().trim()"
+                            class="mt-4 inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            @if (parsingSteps()) {
+                                <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle
+                                        class="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        stroke-width="4"
+                                    ></circle>
+                                    <path
+                                        class="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                                    ></path>
+                                </svg>
+                                Parsing instructions...
+                            } @else {
+                                ✨ Parse instructions
+                            }
+                        </button>
+                    </section>
+
+                    <section class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900">Instructions *</h3>
+                                <p class="mt-1 text-sm leading-6 text-slate-600">
+                                    Edit the parsed instruction steps until the flow feels just right.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                (click)="addStep()"
+                                class="shrink-0 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+                            >
+                                + Add step
+                            </button>
+                        </div>
+
+                        <div class="mt-6 space-y-4">
+                            @for (step of steps(); track $index; let i = $index) {
+                                <div class="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200/80">
+                                    @if (step.section_name) {
+                                        @if (i === 0 || steps()[i - 1].section_name !== step.section_name) {
+                                            <div
+                                                class="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600"
+                                            >
+                                                {{ step.section_name }}
+                                            </div>
+                                        }
+                                    }
+
+                                    <div class="flex items-start gap-4">
+                                        <span
+                                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white"
+                                        >
+                                            {{ i + 1 }}
+                                        </span>
+                                        <textarea
+                                            [ngModel]="step.description"
+                                            (ngModelChange)="updateStep(i, $event)"
+                                            [name]="'step-' + i"
+                                            rows="4"
+                                            placeholder="Describe this step..."
+                                            class="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                                        ></textarea>
+                                        @if (steps().length > 1) {
+                                            <button
+                                                type="button"
+                                                (click)="removeStep(i)"
+                                                class="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                                                aria-label="Remove step"
+                                            >
+                                                <svg
+                                                    class="h-5 w-5"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M6 18L18 6M6 6l12 12"
+                                                    />
+                                                </svg>
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </section>
                 </div>
             </section>
 
-            <!-- Submit -->
-            <div class="flex items-center justify-end gap-4">
-                <a routerLink="/" class="rounded-xl px-6 py-3 font-semibold text-slate-600 hover:text-slate-900">
+            <div class="mt-10 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <a
+                    [routerLink]="backLink()"
+                    class="inline-flex items-center justify-center rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                >
                     Cancel
                 </a>
                 <button
                     type="submit"
                     [disabled]="saving()"
-                    class="rounded-xl bg-indigo-600 px-8 py-3 font-semibold text-white transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    class="inline-flex items-center justify-center rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     @if (saving()) {
                         <span class="flex items-center gap-2">
@@ -439,6 +559,6 @@
                     }
                 </button>
             </div>
-        </form>
-    </div>
+        </section>
+    </form>
 </main>

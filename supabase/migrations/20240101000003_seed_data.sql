@@ -326,3 +326,239 @@ INSERT INTO public.recipe_steps (recipe_id, step_number, description) VALUES
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 5, 'Add zucchini, green beans, beans, and pasta. Cook until pasta is tender, about 10 minutes.'),
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 6, 'Remove Parmesan rind, season with salt and pepper. Serve with extra Parmesan on top.');
 
+-- ============================================
+-- RECIPE 11: Blueberry Pancakes
+-- ============================================
+INSERT INTO public.recipes (id, category_id, title, description, image_url, prep_time, cook_time, servings, is_published)
+SELECT
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid,
+  id,
+  'Blueberry Pancakes',
+  'Fluffy breakfast pancakes studded with juicy blueberries and served with warm maple syrup',
+  'https://images.unsplash.com/photo-1528207776546-365bb710ee93?w=800',
+  10, 20, 4, true
+FROM public.categories WHERE slug = 'breakfast';
+
+INSERT INTO public.ingredients (recipe_id, amount, unit, name, sort_order) VALUES
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 250, 'g', 'all-purpose flour', 1),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 2, 'tbsp', 'sugar', 2),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 1, 'tbsp', 'baking powder', 3),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 0.5, 'tsp', 'salt', 4),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 2, '', 'eggs', 5),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 300, 'ml', 'milk', 6),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 50, 'g', 'melted butter', 7),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 150, 'g', 'fresh blueberries', 8),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 4, 'tbsp', 'maple syrup', 9);
+
+INSERT INTO public.recipe_steps (recipe_id, step_number, description) VALUES
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 1, 'Whisk flour, sugar, baking powder, and salt together in a large bowl.'),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 2, 'In a separate bowl, whisk eggs, milk, and melted butter until combined.'),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 3, 'Pour the wet ingredients into the dry ingredients and stir until just combined. Fold in the blueberries.'),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 4, 'Heat a lightly buttered skillet over medium heat and spoon batter into the pan.'),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 5, 'Cook until bubbles appear on the surface, flip, and cook until golden brown. Serve with maple syrup.');
+
+-- ============================================
+-- RECIPE 12: Avocado Toast with Poached Eggs
+-- ============================================
+INSERT INTO public.recipes (id, category_id, title, description, image_url, prep_time, cook_time, servings, is_published)
+SELECT
+  'cccccccc-cccc-cccc-cccc-cccccccccccc'::uuid,
+  id,
+  'Avocado Toast with Poached Eggs',
+  'Creamy smashed avocado on toasted sourdough topped with perfectly poached eggs and chili flakes',
+  'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=800',
+  10, 10, 2, true
+FROM public.categories WHERE slug = 'breakfast';
+
+INSERT INTO public.ingredients (recipe_id, amount, unit, name, sort_order) VALUES
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', 2, 'slices', 'sourdough bread', 1),
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', 1, '', 'ripe avocado', 2),
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', 2, '', 'eggs', 3),
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', 1, 'tbsp', 'lemon juice', 4),
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', 1, 'tbsp', 'olive oil', 5),
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', 0.5, 'tsp', 'chili flakes', 6),
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', 1, 'tbsp', 'chopped chives', 7),
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', 1, 'tbsp', 'white vinegar', 8);
+
+INSERT INTO public.recipe_steps (recipe_id, step_number, description) VALUES
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', 1, 'Toast the sourdough slices until golden and crisp.'),
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', 2, 'Mash the avocado with lemon juice, olive oil, salt, and pepper.'),
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', 3, 'Bring a saucepan of water to a gentle simmer and add the vinegar.'),
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', 4, 'Crack each egg into a small bowl, slide into the water, and poach for 3 minutes.'),
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', 5, 'Spread avocado on the toast, top with poached eggs, and finish with chili flakes and chives.');
+
+-- ============================================
+-- RECIPE 13: Fudgy Brownies
+-- ============================================
+INSERT INTO public.recipes (id, category_id, title, description, image_url, prep_time, cook_time, servings, is_published)
+SELECT
+  'dddddddd-dddd-dddd-dddd-dddddddddddd'::uuid,
+  id,
+  'Fudgy Brownies',
+  'Rich chocolate brownies with crackly tops, deep cocoa flavor, and a gooey center',
+  'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=800',
+  15, 30, 12, true
+FROM public.categories WHERE slug = 'desserts';
+
+INSERT INTO public.ingredients (recipe_id, amount, unit, name, sort_order) VALUES
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 200, 'g', 'dark chocolate', 1),
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 170, 'g', 'butter', 2),
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 250, 'g', 'granulated sugar', 3),
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 3, '', 'eggs', 4),
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 90, 'g', 'all-purpose flour', 5),
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 30, 'g', 'cocoa powder', 6),
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 1, 'tsp', 'vanilla extract', 7),
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 0.5, 'tsp', 'salt', 8);
+
+INSERT INTO public.recipe_steps (recipe_id, step_number, description) VALUES
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 1, 'Preheat the oven to 175°C and line a square baking tin with parchment paper.'),
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 2, 'Melt the chocolate and butter together until smooth, then let cool slightly.'),
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 3, 'Whisk sugar into the chocolate mixture, then add eggs one at a time followed by vanilla.'),
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 4, 'Fold in flour, cocoa powder, and salt until just combined.'),
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 5, 'Pour the batter into the tin and bake for 25 to 30 minutes until the edges are set but the center is still fudgy.'),
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 6, 'Cool completely before slicing into squares.');
+
+-- ============================================
+-- RECIPE 14: Berry Yogurt Parfait
+-- ============================================
+INSERT INTO public.recipes (id, category_id, title, description, image_url, prep_time, cook_time, servings, is_published)
+SELECT
+  'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'::uuid,
+  id,
+  'Berry Yogurt Parfait',
+  'Layered Greek yogurt parfait with fresh berries, crunchy granola, and a drizzle of honey',
+  'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=800',
+  10, 0, 2, true
+FROM public.categories WHERE slug = 'desserts';
+
+INSERT INTO public.ingredients (recipe_id, amount, unit, name, sort_order) VALUES
+  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 300, 'g', 'Greek yogurt', 1),
+  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 150, 'g', 'mixed berries', 2),
+  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 80, 'g', 'granola', 3),
+  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 2, 'tbsp', 'honey', 4),
+  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 1, 'tsp', 'vanilla extract', 5),
+  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 1, 'tbsp', 'chia seeds', 6),
+  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 1, 'tbsp', 'sliced almonds', 7);
+
+INSERT INTO public.recipe_steps (recipe_id, step_number, description) VALUES
+  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 1, 'Stir the vanilla extract into the Greek yogurt.'),
+  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 2, 'Spoon a layer of yogurt into two glasses or jars.'),
+  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 3, 'Add a layer of berries and granola, then repeat the layers.'),
+  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 4, 'Finish with honey, chia seeds, and sliced almonds just before serving.');
+
+-- ============================================
+-- RECIPE 15: Brioche French Toast
+-- ============================================
+INSERT INTO public.recipes (id, category_id, title, description, image_url, prep_time, cook_time, servings, is_published)
+SELECT
+  'f1f1f1f1-f1f1-f1f1-f1f1-f1f1f1f1f1f1'::uuid,
+  id,
+  'Brioche French Toast',
+  'Golden brioche French toast with cinnamon, vanilla, and a dusting of powdered sugar',
+  'https://images.unsplash.com/photo-1484723091739-30a097e8f929?w=800',
+  10, 15, 4, true
+FROM public.categories WHERE slug = 'breakfast';
+
+INSERT INTO public.ingredients (recipe_id, amount, unit, name, sort_order) VALUES
+  ('f1f1f1f1-f1f1-f1f1-f1f1-f1f1f1f1f1f1', 8, 'slices', 'brioche bread', 1),
+  ('f1f1f1f1-f1f1-f1f1-f1f1-f1f1f1f1f1f1', 3, '', 'eggs', 2),
+  ('f1f1f1f1-f1f1-f1f1-f1f1-f1f1f1f1f1f1', 180, 'ml', 'milk', 3),
+  ('f1f1f1f1-f1f1-f1f1-f1f1-f1f1f1f1f1f1', 1, 'tsp', 'vanilla extract', 4),
+  ('f1f1f1f1-f1f1-f1f1-f1f1-f1f1f1f1f1f1', 1, 'tsp', 'ground cinnamon', 5),
+  ('f1f1f1f1-f1f1-f1f1-f1f1-f1f1f1f1f1f1', 2, 'tbsp', 'butter', 6),
+  ('f1f1f1f1-f1f1-f1f1-f1f1-f1f1f1f1f1f1', 2, 'tbsp', 'powdered sugar', 7),
+  ('f1f1f1f1-f1f1-f1f1-f1f1-f1f1f1f1f1f1', 4, 'tbsp', 'maple syrup', 8);
+
+INSERT INTO public.recipe_steps (recipe_id, step_number, description) VALUES
+  ('f1f1f1f1-f1f1-f1f1-f1f1-f1f1f1f1f1f1', 1, 'Whisk eggs, milk, vanilla, and cinnamon together in a shallow dish.'),
+  ('f1f1f1f1-f1f1-f1f1-f1f1-f1f1f1f1f1f1', 2, 'Dip each slice of brioche into the custard mixture until lightly soaked on both sides.'),
+  ('f1f1f1f1-f1f1-f1f1-f1f1-f1f1f1f1f1f1', 3, 'Melt butter in a skillet over medium heat and cook the bread until golden brown on both sides.'),
+  ('f1f1f1f1-f1f1-f1f1-f1f1-f1f1f1f1f1f1', 4, 'Serve warm with powdered sugar and maple syrup.');
+
+-- ============================================
+-- RECIPE 16: Overnight Oats with Banana
+-- ============================================
+INSERT INTO public.recipes (id, category_id, title, description, image_url, prep_time, cook_time, servings, is_published)
+SELECT
+  'f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2'::uuid,
+  id,
+  'Overnight Oats with Banana',
+  'Creamy overnight oats with banana, cinnamon, chia seeds, and toasted walnuts',
+  'https://images.unsplash.com/photo-1747339443277-8cf2d02cd504?w=800',
+  10, 0, 2, true
+FROM public.categories WHERE slug = 'breakfast';
+
+INSERT INTO public.ingredients (recipe_id, amount, unit, name, sort_order) VALUES
+  ('f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2', 100, 'g', 'rolled oats', 1),
+  ('f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2', 250, 'ml', 'milk or oat milk', 2),
+  ('f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2', 150, 'g', 'Greek yogurt', 3),
+  ('f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2', 1, '', 'banana', 4),
+  ('f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2', 1, 'tbsp', 'chia seeds', 5),
+  ('f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2', 1, 'tbsp', 'honey', 6),
+  ('f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2', 0.5, 'tsp', 'ground cinnamon', 7),
+  ('f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2', 2, 'tbsp', 'chopped walnuts', 8);
+
+INSERT INTO public.recipe_steps (recipe_id, step_number, description) VALUES
+  ('f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2', 1, 'In a bowl or jar, combine oats, milk, yogurt, chia seeds, honey, and cinnamon.'),
+  ('f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2', 2, 'Stir well, cover, and refrigerate overnight or for at least 6 hours.'),
+  ('f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2', 3, 'Before serving, top with sliced banana and chopped walnuts.');
+
+-- ============================================
+-- RECIPE 17: Lemon Cheesecake Cups
+-- ============================================
+INSERT INTO public.recipes (id, category_id, title, description, image_url, prep_time, cook_time, servings, is_published)
+SELECT
+  'f3f3f3f3-f3f3-f3f3-f3f3-f3f3f3f3f3f3'::uuid,
+  id,
+  'Lemon Cheesecake Cups',
+  'No-bake lemon cheesecake cups with a buttery biscuit base and bright citrus flavor',
+  'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=800',
+  20, 0, 6, true
+FROM public.categories WHERE slug = 'desserts';
+
+INSERT INTO public.ingredients (recipe_id, amount, unit, name, sort_order) VALUES
+  ('f3f3f3f3-f3f3-f3f3-f3f3-f3f3f3f3f3f3', 180, 'g', 'digestive biscuits', 1),
+  ('f3f3f3f3-f3f3-f3f3-f3f3-f3f3f3f3f3f3', 80, 'g', 'melted butter', 2),
+  ('f3f3f3f3-f3f3-f3f3-f3f3-f3f3f3f3f3f3', 300, 'g', 'cream cheese', 3),
+  ('f3f3f3f3-f3f3-f3f3-f3f3-f3f3f3f3f3f3', 200, 'ml', 'heavy cream', 4),
+  ('f3f3f3f3-f3f3-f3f3-f3f3-f3f3f3f3f3f3', 80, 'g', 'powdered sugar', 5),
+  ('f3f3f3f3-f3f3-f3f3-f3f3-f3f3f3f3f3f3', 2, '', 'lemons', 6),
+  ('f3f3f3f3-f3f3-f3f3-f3f3-f3f3f3f3f3f3', 1, 'tsp', 'vanilla extract', 7);
+
+INSERT INTO public.recipe_steps (recipe_id, step_number, description) VALUES
+  ('f3f3f3f3-f3f3-f3f3-f3f3-f3f3f3f3f3f3', 1, 'Crush the biscuits into fine crumbs and mix with melted butter.'),
+  ('f3f3f3f3-f3f3-f3f3-f3f3-f3f3f3f3f3f3', 2, 'Press the crumb mixture into the bottom of serving glasses or jars.'),
+  ('f3f3f3f3-f3f3-f3f3-f3f3-f3f3f3f3f3f3', 3, 'Beat cream cheese, powdered sugar, lemon zest, lemon juice, and vanilla until smooth.'),
+  ('f3f3f3f3-f3f3-f3f3-f3f3-f3f3f3f3f3f3', 4, 'Whip the cream separately until soft peaks form, then fold it into the cream cheese mixture.'),
+  ('f3f3f3f3-f3f3-f3f3-f3f3-f3f3f3f3f3f3', 5, 'Spoon the filling over the biscuit base and chill for at least 2 hours before serving.');
+
+-- ============================================
+-- RECIPE 18: Apple Crumble
+-- ============================================
+INSERT INTO public.recipes (id, category_id, title, description, image_url, prep_time, cook_time, servings, is_published)
+SELECT
+  'f4f4f4f4-f4f4-f4f4-f4f4-f4f4f4f4f4f4'::uuid,
+  id,
+  'Apple Crumble',
+  'Warm baked apples topped with a buttery oat crumble and a hint of cinnamon',
+  'https://images.unsplash.com/photo-1706799419621-14d7f424de83?q=80&',
+  20, 40, 6, true
+FROM public.categories WHERE slug = 'desserts';
+
+INSERT INTO public.ingredients (recipe_id, amount, unit, name, sort_order) VALUES
+  ('f4f4f4f4-f4f4-f4f4-f4f4-f4f4f4f4f4f4', 6, '', 'apples', 1),
+  ('f4f4f4f4-f4f4-f4f4-f4f4-f4f4f4f4f4f4', 80, 'g', 'brown sugar', 2),
+  ('f4f4f4f4-f4f4-f4f4-f4f4-f4f4f4f4f4f4', 1, 'tsp', 'ground cinnamon', 3),
+  ('f4f4f4f4-f4f4-f4f4-f4f4-f4f4f4f4f4f4', 120, 'g', 'all-purpose flour', 4),
+  ('f4f4f4f4-f4f4-f4f4-f4f4-f4f4f4f4f4f4', 80, 'g', 'rolled oats', 5),
+  ('f4f4f4f4-f4f4-f4f4-f4f4-f4f4f4f4f4f4', 100, 'g', 'cold butter', 6),
+  ('f4f4f4f4-f4f4-f4f4-f4f4-f4f4f4f4f4f4', 1, 'tbsp', 'lemon juice', 7),
+  ('f4f4f4f4-f4f4-f4f4-f4f4-f4f4f4f4f4f4', 1, 'pinch', 'salt', 8);
+
+INSERT INTO public.recipe_steps (recipe_id, step_number, description) VALUES
+  ('f4f4f4f4-f4f4-f4f4-f4f4-f4f4f4f4f4f4', 1, 'Preheat the oven to 180°C and lightly grease a baking dish.'),
+  ('f4f4f4f4-f4f4-f4f4-f4f4-f4f4f4f4f4f4', 2, 'Peel, core, and slice the apples, then toss with half the brown sugar, cinnamon, and lemon juice.'),
+  ('f4f4f4f4-f4f4-f4f4-f4f4-f4f4f4f4f4f4', 3, 'Place the apples in the baking dish.'),
+  ('f4f4f4f4-f4f4-f4f4-f4f4-f4f4f4f4f4f4', 4, 'Rub the flour, oats, remaining brown sugar, butter, and salt together until crumbly.'),
+  ('f4f4f4f4-f4f4-f4f4-f4f4-f4f4f4f4f4f4', 5, 'Scatter the crumble topping over the apples and bake for 35 to 40 minutes until golden and bubbling.');
+

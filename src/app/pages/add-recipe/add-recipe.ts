@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
@@ -18,7 +18,7 @@ interface StepForm {
 
 @Component({
     selector: 'app-add-recipe',
-    standalone: true,
+    changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [CommonModule, FormsModule, RouterLink],
     templateUrl: './add-recipe.html',
 })
@@ -62,6 +62,52 @@ export class AddRecipePage implements OnInit {
     rawStepsText = signal('');
     parsingIngredients = signal(false);
     parsingSteps = signal(false);
+
+    backLink = computed(() =>
+        this.isEditMode() && this.recipeId() ? ['/recipes', this.recipeId()!] : ['/recipes/new'],
+    );
+    backLabel = computed(() => (this.isEditMode() ? 'Back to recipe' : 'Back to options'));
+    pageTitle = computed(() => (this.isEditMode() ? 'Edit recipe' : 'Write or paste recipe'));
+    pageDescription = computed(() =>
+        this.isEditMode() ? 'Update your recipe' : 'Start from scratch or paste recipe text into the helpers below.',
+    );
+    selectedCategory = computed(() => this.categories().find((category) => category.id === this.categoryId()) ?? null);
+    selectedCategoryLabel = computed(() => {
+        const category = this.selectedCategory();
+
+        if (!category) {
+            return 'Choose a category';
+        }
+
+        return `${category.emoji ? `${category.emoji} ` : ''}${category.name}`;
+    });
+    totalTimeLabel = computed(() => {
+        const total = (this.prepTime() ?? 0) + (this.cookTime() ?? 0);
+        return total > 0 ? `${total} min total` : 'Add timing';
+    });
+    servingsLabel = computed(() => `${this.servings() ?? 4} servings`);
+    displayTitle = computed(() => {
+        const title = this.title().trim();
+        return title || (this.isEditMode() ? 'Edit recipe' : 'Your recipe title');
+    });
+    displayDescription = computed(() => {
+        const description = this.description().trim();
+
+        if (description) {
+            return description;
+        }
+
+        return this.isEditMode()
+            ? 'Update the details, ingredients, and instructions below.'
+            : 'Paste ingredients and instructions below, then let AI turn them into a polished draft.';
+    });
+    coverButtonLabel = computed(() => {
+        if (this.uploadingImage()) {
+            return 'Uploading cover image...';
+        }
+
+        return this.imagePreview() ? 'Change cover image' : 'Upload cover image';
+    });
 
     ngOnInit() {
         this.loadCategories();
