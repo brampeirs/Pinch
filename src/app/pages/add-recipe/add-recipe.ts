@@ -258,10 +258,9 @@ export class AddRecipePage implements OnInit {
 
         this.parsingIngredients.set(true);
         this.error.set(null);
-        this.ingredients.set([]); // Clear existing
+        this.ingredients.set([]);
 
-        let fullJson = '';
-        let extractedCount = 0;
+        let hasParsedItems = false;
 
         for await (const chunk of this.supabase.parseRecipeTextStream(text, 'ingredients')) {
             if (chunk.error) {
@@ -269,38 +268,25 @@ export class AddRecipePage implements OnInit {
                 this.error.set('Parsen mislukt: ' + chunk.error);
                 return;
             }
-            if (chunk.delta) {
-                fullJson += chunk.delta;
 
-                // Try to extract complete ingredient objects as they come in (with optional section_name)
-                const matches = fullJson.matchAll(
-                    /\{"name":"([^"]+)","amount":(null|\d+(?:\.\d+)?),"unit":"([^"]*)","section_name":(null|"([^"]*)")\}/g,
-                );
-                const items: IngredientForm[] = [];
-                for (const match of matches) {
-                    items.push({
-                        name: match[1],
-                        amount: match[2] === 'null' ? null : parseFloat(match[2]),
-                        unit: match[3],
-                        section_name: match[4] === 'null' ? null : match[5] || null,
-                    });
-                }
-                // Only update if we found new items
-                if (items.length > extractedCount) {
-                    extractedCount = items.length;
-                    this.ingredients.set(items);
-                }
+            if (chunk.partial?.items) {
+                hasParsedItems = true;
+                this.ingredients.set(chunk.partial.items);
+            }
+
+            if (chunk.done) {
+                break;
             }
         }
 
         this.parsingIngredients.set(false);
 
-        // Final validation with proper JSON parsing
-        try {
-            const parsed = JSON.parse(fullJson) as { items: IngredientForm[] };
-            this.ingredients.set(parsed.items);
+        if (hasParsedItems) {
             this.rawIngredientsText.set('');
-        } catch {
+            return;
+        }
+
+        if (!this.error()) {
             this.error.set('Parsen mislukt: ongeldige response');
         }
     }
@@ -311,10 +297,9 @@ export class AddRecipePage implements OnInit {
 
         this.parsingSteps.set(true);
         this.error.set(null);
-        this.steps.set([]); // Clear existing
+        this.steps.set([]);
 
-        let fullJson = '';
-        let extractedCount = 0;
+        let hasParsedItems = false;
 
         for await (const chunk of this.supabase.parseRecipeTextStream(text, 'steps')) {
             if (chunk.error) {
@@ -322,38 +307,25 @@ export class AddRecipePage implements OnInit {
                 this.error.set('Parsen mislukt: ' + chunk.error);
                 return;
             }
-            if (chunk.delta) {
-                fullJson += chunk.delta;
 
-                // Try to extract complete step objects as they come in (with optional section_name)
-                const matches = fullJson.matchAll(
-                    /\{"description":"((?:[^"\\]|\\.)*)","section_name":(null|"([^"]*)")\}/g,
-                );
-                const items: StepForm[] = [];
-                for (const match of matches) {
-                    // Unescape JSON string
-                    const desc = match[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-                    items.push({
-                        description: desc,
-                        section_name: match[2] === 'null' ? null : match[3] || null,
-                    });
-                }
-                // Only update if we found new items
-                if (items.length > extractedCount) {
-                    extractedCount = items.length;
-                    this.steps.set(items);
-                }
+            if (chunk.partial?.items) {
+                hasParsedItems = true;
+                this.steps.set(chunk.partial.items);
+            }
+
+            if (chunk.done) {
+                break;
             }
         }
 
         this.parsingSteps.set(false);
 
-        // Final validation with proper JSON parsing
-        try {
-            const parsed = JSON.parse(fullJson) as { items: StepForm[] };
-            this.steps.set(parsed.items);
+        if (hasParsedItems) {
             this.rawStepsText.set('');
-        } catch {
+            return;
+        }
+
+        if (!this.error()) {
             this.error.set('Parsen mislukt: ongeldige response');
         }
     }

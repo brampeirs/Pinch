@@ -3,7 +3,8 @@
   "specifiers": {
     "jsr:@supabase/functions-js@*": "2.99.2",
     "jsr:@supabase/functions-js@^0.0.0-automated": "0.0.0-jsr-test.1",
-    "jsr:@supabase/supabase-js@2": "2.99.2"
+    "jsr:@supabase/supabase-js@2": "2.99.2",
+    "jsr:@zod/zod@*": "4.3.6"
   },
   "jsr": {
     "@supabase/functions-js@0.0.0-jsr-test.1": {
@@ -17,6 +18,9 @@
       "dependencies": [
         "jsr:@supabase/functions-js@^0.0.0-automated"
       ]
+    },
+    "@zod/zod@4.3.6": {
+      "integrity": "7144e5e11f8ffc3cf6e2fca624f6597a8762898aac9868cc8938e9398b96ffe4"
     }
   },
   "remote": {

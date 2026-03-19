@@ -4,6 +4,12 @@ import { vi } from 'vitest';
 import { AddRecipePage } from './add-recipe';
 import { SupabaseService } from '../../services/supabase.service';
 
+async function* createStream<T>(chunks: T[]) {
+    for (const chunk of chunks) {
+        yield chunk;
+    }
+}
+
 describe('AddRecipePage', () => {
     let fixture: ComponentFixture<AddRecipePage>;
     const supabaseService = {
@@ -17,6 +23,7 @@ describe('AddRecipePage', () => {
 
     beforeEach(async () => {
         supabaseService.getCategories.mockResolvedValue({ data: [], error: null });
+        supabaseService.parseRecipeTextStream.mockReset();
 
         await TestBed.configureTestingModule({
             imports: [AddRecipePage],
@@ -52,5 +59,65 @@ describe('AddRecipePage', () => {
         expect(text).toContain('Ingredients *');
         expect(text).toContain('Instructions *');
         expect(element.querySelector('a[href="/recipes/new"]')?.textContent).toContain('Back to options');
+    });
+
+    it('streams parsed ingredients as structured partial objects', async () => {
+        const component = fixture.componentInstance;
+        const parsedIngredients = [
+            { name: 'flour', amount: 500, unit: 'g', section_name: 'Dough' },
+            { name: 'water', amount: 300, unit: 'ml', section_name: 'Dough' },
+        ];
+
+        component.rawIngredientsText.set('500g flour\n300ml water');
+        supabaseService.parseRecipeTextStream.mockReturnValue(
+            createStream([
+                { partial: { items: [parsedIngredients[0]] } },
+                { partial: { items: parsedIngredients }, done: true },
+            ]),
+        );
+
+        await component.parseIngredients();
+
+        expect(supabaseService.parseRecipeTextStream).toHaveBeenCalledWith('500g flour\n300ml water', 'ingredients');
+        expect(component.ingredients()).toEqual(parsedIngredients);
+        expect(component.rawIngredientsText()).toBe('');
+        expect(component.error()).toBeNull();
+        expect(component.parsingIngredients()).toBe(false);
+    });
+
+    it('streams parsed steps as structured partial objects', async () => {
+        const component = fixture.componentInstance;
+        const parsedSteps = [
+            { description: 'Mix everything together.', section_name: 'Dough' },
+            { description: 'Bake until golden.', section_name: null },
+        ];
+
+        component.rawStepsText.set('Mix everything together. Bake until golden.');
+        supabaseService.parseRecipeTextStream.mockReturnValue(
+            createStream([{ partial: { items: parsedSteps } }, { done: true }]),
+        );
+
+        await component.parseSteps();
+
+        expect(supabaseService.parseRecipeTextStream).toHaveBeenCalledWith(
+            'Mix everything together. Bake until golden.',
+            'steps',
+        );
+        expect(component.steps()).toEqual(parsedSteps);
+        expect(component.rawStepsText()).toBe('');
+        expect(component.error()).toBeNull();
+        expect(component.parsingSteps()).toBe(false);
+    });
+
+    it('shows a parse error when the stream reports one', async () => {
+        const component = fixture.componentInstance;
+
+        component.rawIngredientsText.set('broken ingredient text');
+        supabaseService.parseRecipeTextStream.mockReturnValue(createStream([{ error: 'bad response' }]));
+
+        await component.parseIngredients();
+
+        expect(component.error()).toBe('Parsen mislukt: bad response');
+        expect(component.parsingIngredients()).toBe(false);
     });
 });

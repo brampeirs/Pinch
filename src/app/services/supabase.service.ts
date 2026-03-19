@@ -19,6 +19,26 @@ interface CreateRecipeEdgeFunctionResponse {
     error?: string;
 }
 
+export interface ParsedIngredient {
+    name: string;
+    amount: number | null;
+    unit: string;
+    section_name: string | null;
+}
+
+export interface ParsedStep {
+    description: string;
+    section_name: string | null;
+}
+
+interface ParseRecipeStreamEvent<TItem> {
+    partial?: {
+        items?: TItem[];
+    };
+    done?: boolean;
+    error?: string;
+}
+
 @Injectable({
     providedIn: 'root',
 })
@@ -351,10 +371,12 @@ export class SupabaseService {
     }
 
     // ============ AI PARSING (STREAMING) ============
+    parseRecipeTextStream(text: string, type: 'ingredients'): AsyncGenerator<ParseRecipeStreamEvent<ParsedIngredient>>;
+    parseRecipeTextStream(text: string, type: 'steps'): AsyncGenerator<ParseRecipeStreamEvent<ParsedStep>>;
     async *parseRecipeTextStream(
         text: string,
         type: 'ingredients' | 'steps',
-    ): AsyncGenerator<{ delta?: string; done?: boolean; error?: string }> {
+    ): AsyncGenerator<ParseRecipeStreamEvent<ParsedIngredient | ParsedStep>> {
         const url = `${environment.supabase.url}/functions/v1/parse-recipe`;
 
         const response = await fetch(url, {
@@ -377,6 +399,18 @@ export class SupabaseService {
             return;
         }
 
+        const parseEvent = (data: string): ParseRecipeStreamEvent<ParsedIngredient | ParsedStep> | null => {
+            if (data === '[DONE]') {
+                return { done: true };
+            }
+
+            try {
+                return JSON.parse(data) as ParseRecipeStreamEvent<ParsedIngredient | ParsedStep>;
+            } catch {
+                return null;
+            }
+        };
+
         const decoder = new TextDecoder();
         let buffer = '';
 
@@ -386,32 +420,40 @@ export class SupabaseService {
 
             buffer += decoder.decode(value, { stream: true });
 
-            // Parse SSE messages
-            const lines = buffer.split('\n\n');
-            buffer = lines.pop() || '';
+            const messages = buffer.split('\n\n');
+            buffer = messages.pop() || '';
 
-            for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    const data = line.slice(6);
-                    if (data === '[DONE]') {
-                        yield { done: true };
-                        return;
-                    }
+            for (const message of messages) {
+                const data = message
+                    .split('\n')
+                    .filter((line) => line.startsWith('data: '))
+                    .map((line) => line.slice(6))
+                    .join('\n');
 
-                    try {
-                        const parsed = JSON.parse(data);
-                        if (parsed.error) {
-                            yield { error: parsed.error };
-                            return;
-                        }
-                        if (parsed.delta) {
-                            yield { delta: parsed.delta };
-                        }
-                    } catch {
-                        // Ignore parse errors
-                    }
+                if (!data) {
+                    continue;
+                }
+
+                const event = parseEvent(data);
+                if (!event) {
+                    continue;
+                }
+
+                yield event;
+
+                if (event.done || event.error) {
+                    return;
                 }
             }
+        }
+
+        if (!buffer.startsWith('data: ')) {
+            return;
+        }
+
+        const event = parseEvent(buffer.slice(6));
+        if (event) {
+            yield event;
         }
     }
 }

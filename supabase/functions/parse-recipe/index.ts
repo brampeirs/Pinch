@@ -1,6 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import OpenAI from 'jsr:@openai/openai';
-import { zodTextFormat } from 'jsr:@openai/openai/helpers/zod';
+import { createGateway, streamObject } from 'npm:ai';
+import { createOpenAI } from 'npm:@ai-sdk/openai';
 import { z } from 'jsr:@zod/zod';
 
 const corsHeaders = {
@@ -9,12 +9,11 @@ const corsHeaders = {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-// Zod schemas voor structured outputs
 const IngredientSchema = z.object({
     name: z.string(),
     amount: z.number().nullable(),
     unit: z.string(),
-    section_name: z.string().nullable(), // e.g., "De Saus", "Het Deeg"
+    section_name: z.string().nullable(),
 });
 
 const IngredientsResponseSchema = z.object({
@@ -23,52 +22,55 @@ const IngredientsResponseSchema = z.object({
 
 const StepSchema = z.object({
     description: z.string(),
-    section_name: z.string().nullable(), // e.g., "Voorbereiding", "De Saus"
+    section_name: z.string().nullable(),
 });
 
 const StepsResponseSchema = z.object({
     items: z.array(StepSchema),
 });
 
-// Type inference from Zod schemas
-type ParsedIngredient = z.infer<typeof IngredientSchema>;
-type ParsedStep = z.infer<typeof StepSchema>;
-
 interface ParseRequest {
     text: string;
     type: 'ingredients' | 'steps';
 }
 
-const INGREDIENTS_PROMPT = `Je bent een assistent die ingrediënten uit tekst extraheert.
+const INGREDIENTS_PROMPT = `You extract recipe ingredients from raw text for a cooking app.
 
-**Secties detecteren:**
-Als de tekst kopjes heeft zoals "Voor de saus:", "Het deeg:", "De orzotto:" etc.,
-gebruik dan dat kopje als section_name voor alle ingrediënten eronder.
-Als er geen secties zijn, zet section_name op null.
+Rules:
+- Return every ingredient in the original order.
+- Preserve the original language of ingredient names. Do not translate.
+- Detect section headings such as "For the sauce", "The dough", or "Topping" and use them as section_name for the ingredients that follow.
+- If there is no section heading, use null for section_name.
+- Use title case for section_name when a section exists.
+- Set amount to null when no reliable numeric quantity is present.
+- Use an empty string for unit when no explicit unit is provided.
+- Normalize simple count-based ingredients like "2 eggs" to amount: 2 and unit: "pieces".`;
 
-**Voorbeelden:**
-"500g pasta" → name: "pasta", amount: 500, unit: "g", section_name: null
-"2 eieren" → name: "eieren", amount: 2, unit: "stuks", section_name: null
-"zout naar smaak" → name: "zout", amount: null, unit: "", section_name: null
+const STEPS_PROMPT = `You extract recipe preparation steps from raw text for a cooking app.
 
-**Met secties:**
-"VOOR DE SAUS:
-100ml room
-50g boter"
-→ [
-  { name: "room", amount: 100, unit: "ml", section_name: "Voor de saus" },
-  { name: "boter", amount: 50, unit: "g", section_name: "Voor de saus" }
-]`;
+Rules:
+- Split the text into clear, actionable steps in the original order.
+- Preserve the original language of the step descriptions. Do not translate.
+- Detect section headings such as "Sauce", "Finishing", or "Breadcrumbs" and use them as section_name for the steps that follow.
+- If there is no section heading, use null for section_name.
+- Use title case for section_name when a section exists.
+- Do not omit important details from the source text.`;
 
-const STEPS_PROMPT = `Je bent een assistent die bereidingsstappen uit tekst extraheert.
-Splits de tekst in logische stappen. Elke stap moet een duidelijke actie beschrijven.
+function createModel() {
+    const gatewayApiKey = Deno.env.get('AI_GATEWAY_API_KEY');
+    if (gatewayApiKey) {
+        const aiGateway = createGateway({ apiKey: gatewayApiKey });
+        return aiGateway.languageModel('openai/gpt-4o-mini');
+    }
 
-**Secties detecteren:**
-Als de tekst kopjes heeft zoals "De saus:", "Afwerking:", "Het broodkruim:" etc.,
-gebruik dan dat kopje als section_name voor alle stappen eronder.
-Als er geen secties zijn, zet section_name op null.
+    const openAiApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (openAiApiKey) {
+        const openai = createOpenAI({ apiKey: openAiApiKey });
+        return openai('gpt-4o-mini');
+    }
 
-**Normaliseer sectienamen:** Gebruik title case (eerste letter hoofdletter).`;
+    throw new Error('AI_GATEWAY_API_KEY or OPENAI_API_KEY must be configured');
+}
 
 Deno.serve(async (req: Request) => {
     // Handle CORS preflight
@@ -77,65 +79,45 @@ Deno.serve(async (req: Request) => {
     }
 
     try {
-        const apiKey = Deno.env.get('OPENAI_API_KEY');
-        if (!apiKey) {
-            throw new Error('OPENAI_API_KEY not configured');
-        }
-
         const { text, type }: ParseRequest = await req.json();
 
         if (!text || !type) {
             throw new Error('Missing text or type parameter');
         }
 
-        const openai = new OpenAI({ apiKey });
-
         const schema = type === 'ingredients' ? IngredientsResponseSchema : StepsResponseSchema;
-        const schemaName = type === 'ingredients' ? 'ingredients' : 'steps';
         const prompt = type === 'ingredients' ? INGREDIENTS_PROMPT : STEPS_PROMPT;
         const userMessage =
             type === 'ingredients'
-                ? `Parse de volgende ingrediënten:\n\n${text}`
-                : `Parse de volgende bereidingsstappen:\n\n${text}`;
+                ? `Parse the following ingredients:\n\n${text}`
+                : `Parse the following recipe steps:\n\n${text}`;
 
-        // Create streaming response
+        const model = createModel();
+
         const stream = new ReadableStream({
             async start(controller) {
                 const encoder = new TextEncoder();
 
                 try {
-                    const openaiStream = openai.responses.stream({
-                        model: 'gpt-4o-mini',
-                        input: [
-                            { role: 'system', content: prompt },
-                            { role: 'user', content: userMessage },
-                        ],
-                        text: {
-                            format: zodTextFormat(schema, schemaName),
-                        },
+                    const result = streamObject({
+                        model,
+                        schema,
+                        system: prompt,
+                        prompt: userMessage,
                     });
 
-                    openaiStream.on('response.output_text.delta', (event) => {
-                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ delta: event.delta })}\n\n`));
-                    });
+                    for await (const partialObject of result.partialObjectStream) {
+                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ partial: partialObject })}\n\n`));
+                    }
 
-                    openaiStream.on('response.output_text.done', () => {
-                        controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
-                        controller.close();
-                    });
-
-                    openaiStream.on('response.error', (event) => {
-                        controller.enqueue(
-                            encoder.encode(`data: ${JSON.stringify({ error: String(event.error) })}\n\n`),
-                        );
-                        controller.close();
-                    });
-
-                    // Wait for stream to complete
-                    await openaiStream.finalResponse();
-                } catch (err) {
-                    const msg = err instanceof Error ? err.message : 'Stream error';
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`));
+                    const finalObject = await result.object;
+                    controller.enqueue(
+                        encoder.encode(`data: ${JSON.stringify({ partial: finalObject, done: true })}\n\n`),
+                    );
+                    controller.close();
+                } catch (error) {
+                    const message = error instanceof Error ? error.message : 'Stream error';
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`));
                     controller.close();
                 }
             },
