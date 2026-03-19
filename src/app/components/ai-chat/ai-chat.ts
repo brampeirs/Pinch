@@ -12,9 +12,67 @@ import { ShimmerStatus } from './shimmer-status/shimmer-status';
 
 // Mobile breakpoint (matches Tailwind's 'md')
 const MOBILE_BREAKPOINT = 768;
+const WELCOME_MESSAGE =
+    "Hi! 👋 I'm your cooking assistant. Tell me what you want to make or what ingredients you have, and I'll find the best recipes for you!";
+
+interface ChatSuggestion {
+    category: string;
+    title: string;
+    promptPreview: string;
+    prompt: string;
+    icon: string;
+}
+
+const STARTER_SUGGESTIONS: ChatSuggestion[] = [
+    {
+        category: 'Search collection',
+        title: 'Show soup recipes',
+        promptPreview: 'Browse comforting soups already in my collection',
+        prompt: 'Show me some soup recipes from my collection.',
+        icon: '🔎',
+    },
+    {
+        category: 'Search collection',
+        title: 'Quick dinner ideas',
+        promptPreview: 'Find recipes under 30 minutes',
+        prompt: 'Find quick dinner recipes in my collection that take under 30 minutes.',
+        icon: '🥬',
+    },
+    {
+        category: 'Create recipe',
+        title: 'Create a brownie recipe',
+        promptPreview: 'Generate a rich brownie recipe from scratch',
+        prompt: 'Create a brownie recipe with ingredients and step-by-step instructions.',
+        icon: '✨',
+    },
+    {
+        category: 'Create recipe',
+        title: 'Use my ingredients',
+        promptPreview: 'Turn what I have into a new recipe',
+        prompt: 'Create a new recipe using chicken, spinach, and rice.',
+        icon: '🍳',
+    },
+];
 
 // Re-export for backward compatibility
 export type RecipeResult = ChatRecipe;
+
+function createWelcomeMessage() {
+    return {
+        id: 'welcome',
+        role: 'assistant' as const,
+        parts: [
+            {
+                type: 'text' as const,
+                text: WELCOME_MESSAGE,
+            },
+        ],
+    };
+}
+
+function createInitialMessages() {
+    return [createWelcomeMessage()];
+}
 
 @Component({
     selector: 'app-ai-chat',
@@ -43,6 +101,20 @@ export class AiChat {
             .map((img) => ({ url: img.publicUrl!, mediaType: img.mediaType })),
     );
 
+    protected readonly activeRecipeContext = computed(() => {
+        const recipeId = this.chatContextService.contextRecipeId();
+        if (!recipeId) {
+            return null;
+        }
+
+        return {
+            id: recipeId,
+            title: this.chatContextService.contextRecipeTitle(),
+        };
+    });
+
+    readonly starterSuggestions = STARTER_SUGGESTIONS;
+
     // Chat instance from @ai-sdk/angular with transport configuration
     public chat = new Chat({
         transport: new DefaultChatTransport({
@@ -52,21 +124,10 @@ export class AiChat {
             },
         }),
         // Use 'messages' (not 'initialMessages') for initial state
-        messages: [
-            {
-                id: 'welcome',
-                role: 'assistant' as const,
-                parts: [
-                    {
-                        type: 'text' as const,
-                        text: "Hi! 👋 I'm your cooking assistant. Tell me what you want to make or what ingredients you have, and I'll find the best recipes for you!",
-                    },
-                ],
-            },
-        ],
+        messages: createInitialMessages(),
     });
 
-    isOpen = signal(false);
+    readonly isOpen = this.viewModeService.isOpen;
     inputMessage = signal('');
     autoScrollEnabled = signal(true);
     showJumpToLatest = signal(false);
@@ -131,11 +192,40 @@ export class AiChat {
     }
 
     toggleChat() {
-        this.isOpen.update((v) => {
-            const newValue = !v;
-            this.viewModeService.setOpen(newValue);
-            return newValue;
-        });
+        this.viewModeService.setOpen(!this.isOpen());
+    }
+
+    canStartNewConversation(): boolean {
+        if (this.inputMessage().trim().length > 0) {
+            return true;
+        }
+
+        if (this.uploadingImages().length > 0) {
+            return true;
+        }
+
+        return this.chat.messages.some(
+            (message) => (message as { role?: string; id?: string }).role === 'user' || message.id !== 'welcome',
+        );
+    }
+
+    startNewConversation() {
+        if (!this.canStartNewConversation()) {
+            return;
+        }
+
+        this.chat.stop();
+        this.inputMessage.set('');
+        this.clearUploads();
+        this.resetComposerUi();
+
+        this.chat.messages.length = 0;
+        this.chat.messages.push(...createInitialMessages());
+
+        setTimeout(() => {
+            this.scrollToBottom();
+            this.updateScrollState();
+        }, 0);
     }
 
     protected shouldShowPendingResponseLoader(isChatLoading: boolean): boolean {
@@ -205,6 +295,49 @@ export class AiChat {
         const target = event.target as HTMLTextAreaElement;
         this.inputMessage.set(target.value);
         this.resizeTextarea();
+    }
+
+    shouldShowSuggestions(): boolean {
+        if (this.inputMessage().trim().length > 0) {
+            return false;
+        }
+
+        if (this.uploadingImages().length > 0) {
+            return false;
+        }
+
+        if (this.chat.status === 'streaming' || this.chat.status === 'submitted') {
+            return false;
+        }
+
+        return !this.chat.messages.some((message) => (message as { role?: string }).role === 'user');
+    }
+
+    sendSuggestion(prompt: string) {
+        this.inputMessage.set(prompt);
+        this.sendMessage();
+    }
+
+    private resetComposerUi() {
+        if (this.textareaInput?.nativeElement) {
+            this.textareaInput.nativeElement.style.height = 'auto';
+        }
+
+        if (this.fileInput?.nativeElement) {
+            this.fileInput.nativeElement.value = '';
+        }
+
+        this.autoScrollEnabled.set(true);
+        this.showJumpToLatest.set(false);
+        this.alignNextResponseToTop = false;
+        this.latestUserMessageId = null;
+    }
+
+    private clearUploads() {
+        this.uploadingImages().forEach((img) => {
+            this.imageUploadService.revokePreviewUrl(img.previewUrl);
+        });
+        this.uploadingImages.set([]);
     }
 
     private resizeTextarea() {
@@ -331,10 +464,7 @@ export class AiChat {
         }
 
         // Cleanup: revoke all blob URLs and clear state
-        this.uploadingImages().forEach((img) => {
-            this.imageUploadService.revokePreviewUrl(img.previewUrl);
-        });
-        this.uploadingImages.set([]);
+        this.clearUploads();
 
         // Keep the just-sent prompt near the top of the viewport (ChatGPT-like turn framing).
         this.alignNextResponseToTop = true;

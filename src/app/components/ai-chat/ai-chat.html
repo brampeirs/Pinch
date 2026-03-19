@@ -43,6 +43,31 @@
                 @if (!isMobile()) {
                     <app-chat-mode-toggle />
                 }
+                <button
+                    type="button"
+                    data-testid="new-conversation-button"
+                    (click)="startNewConversation()"
+                    [disabled]="!canStartNewConversation()"
+                    aria-label="Start a new conversation"
+                    title="Start a new conversation"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        aria-hidden="true"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M3 6h18M8.25 6V4.875A1.125 1.125 0 019.375 3.75h5.25A1.125 1.125 0 0115.75 4.875V6m-8.25 0v12A2.25 2.25 0 009.75 20.25h4.5A2.25 2.25 0 0016.5 18V6M10 10.5v6m4-6v6"
+                        />
+                    </svg>
+                </button>
                 <!-- Close button -->
                 <button
                     (click)="toggleChat()"
@@ -77,9 +102,10 @@
                         <div class="max-w-[85%] space-y-2 rounded-2xl bg-muted px-4 py-2.5">
                             @for (part of message.parts; track $index) {
                                 @if ($any(part).type === 'text') {
-                                    <p class="whitespace-pre-wrap text-[16px] leading-relaxed text-foreground">
-                                        {{ part.text }}
-                                    </p>
+                                    <p
+                                        class="whitespace-pre-wrap text-[16px] leading-relaxed text-foreground"
+                                        [textContent]="part.text"
+                                    ></p>
                                 }
                                 <!-- Display images -->
                                 @if ($any(part).type === 'file' && $any(part).mediaType?.startsWith('image/')) {
@@ -351,6 +377,35 @@
                 </div>
             }
 
+            @if (shouldShowSuggestions()) {
+                <div class="suggestions-shell mb-3" aria-label="Conversation starters">
+                    <div class="suggestions-header">
+                        <p class="suggestions-kicker">Start with a suggestion</p>
+                        <p class="suggestions-subtitle">
+                            Search recipes in your collection or create something brand new.
+                        </p>
+                    </div>
+
+                    <div class="suggestion-row">
+                        @for (suggestion of starterSuggestions; track suggestion.prompt) {
+                            <button
+                                type="button"
+                                class="suggestion-pill"
+                                (click)="sendSuggestion(suggestion.prompt)"
+                                [attr.aria-label]="suggestion.prompt"
+                            >
+                                <span class="suggestion-pill-icon" aria-hidden="true">{{ suggestion.icon }}</span>
+                                <span class="suggestion-pill-copy">
+                                    <span class="suggestion-pill-category">{{ suggestion.category }}</span>
+                                    <span class="suggestion-pill-title">{{ suggestion.title }}</span>
+                                    <span class="suggestion-pill-preview">{{ suggestion.promptPreview }}</span>
+                                </span>
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+
             <!-- Hidden file input - only browser-supported formats -->
             <input
                 #fileInput
@@ -362,57 +417,87 @@
             />
 
             <div
-                class="chat-input-box flex items-end gap-2 rounded-2xl border border-input bg-muted/50 px-3 py-2 transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring"
+                class="chat-input-box flex flex-col gap-2 rounded-2xl border border-input bg-muted/50 px-3 py-2 transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring"
             >
-                <!-- Image upload button -->
-                <button
-                    type="button"
-                    (click)="openFileSelector()"
-                    class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                    title="Add images"
-                >
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
-                        />
-                    </svg>
-                </button>
-
-                <textarea
-                    #textareaInput
-                    [value]="inputMessage()"
-                    (input)="updateInput($event)"
-                    (keydown)="handleKeydown($event)"
-                    (focus)="onInputFocus()"
-                    placeholder="Ask about recipes..."
-                    rows="1"
-                    class="chat-textarea flex-1 resize-none border-0 bg-transparent py-1.5 text-[16px] text-foreground outline-none placeholder:text-muted-foreground"
-                ></textarea>
-                @if (!(chat.status === 'streaming' || chat.status === 'submitted')) {
-                    <button
-                        (click)="sendMessage()"
-                        [disabled]="
-                            (!inputMessage().trim() && uploadingImages().length === 0) || hasUploadsInProgress()
-                        "
-                        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
-                    >
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7" />
-                        </svg>
-                    </button>
-                } @else {
-                    <!-- stop button -->
-                    <button
-                        (click)="stopMessage()"
-                        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
-                    >
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                @if (activeRecipeContext(); as recipeContext) {
+                    <div class="flex min-w-0 px-1 pt-0.5">
+                        <div
+                            data-testid="context-recipe-chip"
+                            role="status"
+                            aria-live="polite"
+                            [attr.aria-label]="'Recipe in context: ' + (recipeContext.title || 'Current recipe')"
+                            class="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md border border-border/70 bg-background/80 px-2 py-1 text-[11px] text-muted-foreground"
+                        >
+                            <svg
+                                class="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M8 10h8m-8 4h5m-7 6l-4 1 1-4V6a2 2 0 012-2h14a2 2 0 012 2v9a2 2 0 01-2 2H8z"
+                                />
+                            </svg>
+                            <span class="truncate">{{ recipeContext.title || 'Current recipe' }}</span>
+                        </div>
+                    </div>
                 }
+
+                <div class="flex items-end gap-2">
+                    <!-- Image upload button -->
+                    <button
+                        type="button"
+                        (click)="openFileSelector()"
+                        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                        title="Add images"
+                    >
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+                            />
+                        </svg>
+                    </button>
+
+                    <textarea
+                        #textareaInput
+                        [value]="inputMessage()"
+                        (input)="updateInput($event)"
+                        (keydown)="handleKeydown($event)"
+                        (focus)="onInputFocus()"
+                        placeholder="Ask about recipes..."
+                        rows="1"
+                        class="chat-textarea flex-1 resize-none border-0 bg-transparent py-1.5 text-[16px] text-foreground outline-none placeholder:text-muted-foreground"
+                    ></textarea>
+                    @if (!(chat.status === 'streaming' || chat.status === 'submitted')) {
+                        <button
+                            (click)="sendMessage()"
+                            [disabled]="
+                                (!inputMessage().trim() && uploadingImages().length === 0) || hasUploadsInProgress()
+                            "
+                            class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+                        >
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                    } @else {
+                        <!-- stop button -->
+                        <button
+                            (click)="stopMessage()"
+                            class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
+                        >
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    }
+                </div>
             </div>
         </div>
     </div>

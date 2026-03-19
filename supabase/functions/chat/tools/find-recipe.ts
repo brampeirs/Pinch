@@ -1,6 +1,14 @@
 import { tool, embed } from 'npm:ai';
 import { z } from 'npm:zod';
 import { SupabaseClient } from 'jsr:@supabase/supabase-js@2';
+import { buildSearchQuery } from '../_lib/build-search-query.ts';
+
+interface FindRecipeInput {
+    searchQuery: string;
+    category?: string | null;
+    maxTime?: number | null;
+    matchCount?: number;
+}
 
 // Helper function to generate embeddings using Vercel AI SDK
 async function generateEmbedding(text: string): Promise<number[]> {
@@ -21,7 +29,11 @@ export function createFindRecipeTool(supabase: SupabaseClient) {
         description: `Search for recipes using semantic search.
 Use when user asks for recipes or mentions ingredients. This tool returns a structured output that the UI WILL render as recipe cards. Do NOT generate any text after calling this tool, except if no results.`,
         inputSchema: z.object({
-            searchQuery: z.string().describe('Search terms: ingredients, cooking style, cuisine type'),
+            searchQuery: z
+                .string()
+                .describe(
+                    'Optimized semantic search terms. Never leave empty. If the user only asks for a category, reuse that category here.',
+                ),
             category: z
                 .string()
                 .nullable()
@@ -36,10 +48,16 @@ Use when user asks for recipes or mentions ingredients. This tool returns a stru
                 .describe('ONLY use if user explicitly mentions a time limit. Maximum cooking time in minutes'),
             matchCount: z.number().optional().default(3).describe('Number of results to return (max 3)'),
         }),
-        execute: async ({ searchQuery, category, maxTime, matchCount }) => {
+        execute: async ({ searchQuery, category, maxTime, matchCount }: FindRecipeInput) => {
             console.log('🔍 findRecipe called:', JSON.stringify({ searchQuery, category, maxTime, matchCount }));
 
-            const embedding = await generateEmbedding(searchQuery);
+            const effectiveSearchQuery = buildSearchQuery({ searchQuery, category, maxTime });
+
+            if (effectiveSearchQuery !== searchQuery.trim()) {
+                console.log('🪄 Using fallback semantic query:', effectiveSearchQuery);
+            }
+
+            const embedding = await generateEmbedding(effectiveSearchQuery);
 
             const params = {
                 query_embedding: embedding,
@@ -90,10 +108,10 @@ Use when user asks for recipes or mentions ingredients. This tool returns a stru
                 ) || [];
 
             if (recipes.length === 0) {
-                console.log('⚠️ No recipes found for query:', searchQuery);
+                console.log('⚠️ No recipes found for query:', effectiveSearchQuery);
                 return {
                     recipes: [],
-                    message: `No recipes found for "${searchQuery}". Suggest the user try different search terms.`,
+                    message: `No recipes found for "${effectiveSearchQuery}". Suggest the user try different search terms.`,
                 };
             }
 

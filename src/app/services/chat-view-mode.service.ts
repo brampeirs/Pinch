@@ -43,6 +43,11 @@ export class ChatViewModeService {
         this._isOpen.set(isOpen);
     }
 
+    /** Toggle the chat open state */
+    toggleOpen(): void {
+        this._isOpen.update((isOpen) => !isOpen);
+    }
+
     private loadFromStorage(): ChatViewMode {
         if (typeof localStorage === 'undefined') {
             return 'floating';

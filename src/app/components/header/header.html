@@ -23,25 +23,16 @@
             >
                 Recipes
             </a>
-            <a
-                routerLink="/categories"
-                routerLinkActive="text-slate-900"
-                class="text-sm font-medium text-slate-500 transition-colors hover:text-slate-900"
-            >
-                Categories
-            </a>
         </nav>
 
         <!-- Actions -->
         <div class="flex items-center gap-3">
             <button
-                (click)="toggleSearch()"
-                class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                type="button"
+                (click)="toggleAiChat()"
+                class="hidden rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 sm:inline-flex"
             >
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <circle cx="11" cy="11" r="8" stroke-width="1.5" />
-                    <path d="m21 21-4.3-4.3" stroke-width="1.5" />
-                </svg>
+                Ask AI
             </button>
             <a
                 routerLink="/recipes/new"

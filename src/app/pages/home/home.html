@@ -8,12 +8,12 @@
         </div>
 
         <div class="relative mx-auto max-w-5xl px-6 text-center">
-            <div
+            <!-- <div
                 class="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 py-1.5 text-sm font-medium text-slate-600 backdrop-blur-sm"
             >
                 <span class="flex h-2 w-2 rounded-full bg-green-500"></span>
                 100+ recipes available
-            </div>
+            </div> -->
 
             <h1 class="mb-6 text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl lg:text-7xl">
                 Cooking made
@@ -23,31 +23,36 @@
             </h1>
 
             <p class="mx-auto mb-10 max-w-2xl text-lg text-slate-600 sm:text-xl">
-                Discover recipes you'll actually make.
+                Save and organize all your favorite recipes in one place!
             </p>
 
             <!-- Search bar - Glass effect -->
-            <div
+            <form
                 class="mx-auto flex max-w-xl items-center gap-3 rounded-2xl border border-slate-200/60 bg-white/70 p-2 shadow-xl shadow-slate-200/50 backdrop-blur-md"
+                (submit)="submitSearch($event)"
             >
                 <input
                     type="text"
+                    name="q"
                     placeholder="Search recipes, ingredients..."
+                    [value]="searchQuery()"
+                    (input)="updateSearchQuery($event)"
                     class="flex-1 bg-transparent px-4 py-3 text-slate-900 placeholder-slate-400 outline-none"
                 />
                 <button
+                    type="submit"
                     class="rounded-xl bg-slate-900 px-6 py-3 font-semibold text-white transition-all hover:bg-slate-800 hover:shadow-lg"
                 >
                     Search
                 </button>
-            </div>
+            </form>
         </div>
     </section>
 
     <!-- Latest Recipes - Card grid -->
     <section class="py-20">
         <div class="mx-auto max-w-6xl px-6">
-            <div class="mb-10">
+            <div class="mb-10 text-center">
                 <h2 class="text-3xl font-bold tracking-tight text-slate-900">Latest recipes</h2>
                 <p class="mt-2 text-slate-500">Fresh from the kitchen</p>
             </div>
@@ -65,27 +70,33 @@
             } @else if (error()) {
                 <div class="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
                     <p class="text-red-600">{{ error() }}</p>
-                    <button
-                        (click)="ngOnInit()"
-                        class="mt-4 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-                    >
+                    <button (click)="reload()" class="mt-4 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700">
                         Try again
                     </button>
                 </div>
             } @else {
                 <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                    @for (recipe of recipes(); track recipe.id) {
+                    @for (recipe of latestRecipes(); track recipe.id) {
                         <app-recipe-card [recipe]="recipe" />
                     } @empty {
                         <p class="col-span-full text-center text-slate-500">No recipes found.</p>
                     }
+                </div>
+
+                <div class="mt-10 flex justify-center">
+                    <a
+                        routerLink="/recipes"
+                        class="inline-flex items-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-slate-800"
+                    >
+                        All recipes &gt;
+                    </a>
                 </div>
             }
         </div>
     </section>
 
     <!-- Categories - Bento style -->
-    <section class="bg-slate-50/50 py-20">
+    <!-- <section class="bg-slate-50/50 py-20">
         <div class="mx-auto max-w-6xl px-6">
             <div class="mb-10 text-center">
                 <h2 class="text-3xl font-bold tracking-tight text-slate-900">Explore categories</h2>
@@ -121,5 +132,5 @@
                 }
             </div>
         </div>
-    </section>
+    </section> -->
 </main>

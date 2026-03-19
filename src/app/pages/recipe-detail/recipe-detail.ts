@@ -157,7 +157,7 @@ export class RecipeDetailPage implements OnInit, OnDestroy {
             this.servings.set(mappedRecipe.servings);
 
             // Set chat context so the global chat knows which recipe we're viewing
-            this.chatContext.setRecipeContext(mappedRecipe.id);
+            this.chatContext.setRecipeContext(mappedRecipe.id, mappedRecipe.title);
         } catch (err) {
             console.error('Error loading recipe:', err);
             this.error.set('Er ging iets mis bij het laden van het recept.');

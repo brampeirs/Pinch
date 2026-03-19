@@ -38,9 +38,9 @@
                         {{ recipe().description }}
                     </p>
                 }
-                @if (recipe().similarity !== undefined) {
+                @if (matchPercentageLabel(); as matchPercentageLabel) {
                     <span class="mt-1 inline-block text-[10px] text-muted-foreground/70">
-                        {{ recipe().similarity }}% match
+                        {{ matchPercentageLabel }}
                     </span>
                 } @else {
                     <span class="mt-1 inline-block text-[10px] text-emerald-600">✓ Just created</span>
