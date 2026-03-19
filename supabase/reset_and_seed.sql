@@ -12,10 +12,9 @@ TRUNCATE TABLE categories CASCADE;
 
 -- Step 2: Insert categories (English)
 INSERT INTO public.categories (name, slug, emoji, description) VALUES
-  ('Pasta', 'pasta', '🍝', 'Italian pasta dishes'),
   ('Soups', 'soups', '🍲', 'Warm and cold soups'),
   ('Salads', 'salads', '🥗', 'Fresh salads'),
-  ('Main Dishes', 'main-dishes', '�', 'Hearty main courses'),
+  ('Main Dishes', 'main-dishes', '🍽️', 'Hearty main courses'),
   ('Desserts', 'desserts', '🍰', 'Sweet desserts'),
   ('Breakfast', 'breakfast', '🍳', 'Breakfast recipes');
 
@@ -26,7 +25,7 @@ INSERT INTO public.recipes (id, category_id, title, description, image_url, prep
 SELECT '11111111-1111-1111-1111-111111111111'::uuid, id, 'Pasta Carbonara',
   'Creamy Italian pasta with crispy pancetta, egg yolks, and Parmesan cheese',
   'https://images.unsplash.com/photo-1612874742237-6526221588e3?w=800', 10, 20, 4, true
-FROM public.categories WHERE slug = 'pasta';
+FROM public.categories WHERE slug = 'main-dishes';
 
 -- 2. Chicken Teriyaki
 INSERT INTO public.recipes (id, category_id, title, description, image_url, prep_time, cook_time, servings, is_published)
@@ -265,17 +264,6 @@ INSERT INTO public.recipe_steps (recipe_id, step_number, description) VALUES
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 4, 'Add beans and pasta. Cook until pasta is tender.'),
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 5, 'Season with salt and pepper. Serve with Parmesan on top.');
 
--- Step 6: Add tags to recipes
-UPDATE public.recipes SET tags = ARRAY['italian', 'creamy', 'comfort food', 'quick'] WHERE id = '11111111-1111-1111-1111-111111111111'; -- Pasta Carbonara
-UPDATE public.recipes SET tags = ARRAY['asian', 'japanese', 'sweet', 'savory', 'quick'] WHERE id = '22222222-2222-2222-2222-222222222222'; -- Chicken Teriyaki
-UPDATE public.recipes SET tags = ARRAY['comfort food', 'vegetarian', 'creamy', 'classic'] WHERE id = '33333333-3333-3333-3333-333333333333'; -- Tomato Soup
-UPDATE public.recipes SET tags = ARRAY['asian', 'thai', 'spicy', 'aromatic', 'quick'] WHERE id = '44444444-4444-4444-4444-444444444444'; -- Thai Coconut Soup
-UPDATE public.recipes SET tags = ARRAY['russian', 'creamy', 'comfort food', 'hearty'] WHERE id = '55555555-5555-5555-5555-555555555555'; -- Beef Stroganoff
-UPDATE public.recipes SET tags = ARRAY['french', 'comfort food', 'cheesy', 'classic'] WHERE id = '66666666-6666-6666-6666-666666666666'; -- French Onion Soup
-UPDATE public.recipes SET tags = ARRAY['seafood', 'fish', 'healthy', 'quick', 'light'] WHERE id = '77777777-7777-7777-7777-777777777777'; -- Grilled Salmon
-UPDATE public.recipes SET tags = ARRAY['healthy', 'light', 'classic', 'quick'] WHERE id = '88888888-8888-8888-8888-888888888888'; -- Caesar Salad
-UPDATE public.recipes SET tags = ARRAY['italian', 'vegetarian', 'creamy', 'comfort food'] WHERE id = '99999999-9999-9999-9999-999999999999'; -- Mushroom Risotto
-UPDATE public.recipes SET tags = ARRAY['italian', 'vegetarian', 'healthy', 'hearty'] WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'; -- Minestrone Soup
 
 -- Show result
 SELECT 'Data reset complete!' as status, COUNT(*) as recipe_count FROM recipes;

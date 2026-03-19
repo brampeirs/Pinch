@@ -27,13 +27,8 @@ Use when user asks for recipes or mentions ingredients. This tool returns a stru
                 .nullable()
                 .optional()
                 .describe(
-                    'ONLY use if user explicitly asks for a category. Options: Pasta, Soups, Salads, Main Dishes, Desserts, Breakfast',
+                    'ONLY use if user explicitly asks for a category. Options: Soups, Salads, Main Dishes, Desserts, Breakfast',
                 ),
-            tags: z
-                .array(z.string())
-                .nullable()
-                .optional()
-                .describe('ONLY use if user explicitly mentions tags like "quick", "vegetarian", "spicy"'),
             maxTime: z
                 .number()
                 .nullable()
@@ -41,17 +36,16 @@ Use when user asks for recipes or mentions ingredients. This tool returns a stru
                 .describe('ONLY use if user explicitly mentions a time limit. Maximum cooking time in minutes'),
             matchCount: z.number().optional().default(3).describe('Number of results to return (max 3)'),
         }),
-        execute: async ({ searchQuery, category, tags, maxTime, matchCount }) => {
-            console.log('🔍 findRecipe called:', JSON.stringify({ searchQuery, category, tags, maxTime, matchCount }));
+        execute: async ({ searchQuery, category, maxTime, matchCount }) => {
+            console.log('🔍 findRecipe called:', JSON.stringify({ searchQuery, category, maxTime, matchCount }));
 
             const embedding = await generateEmbedding(searchQuery);
 
             const params = {
                 query_embedding: embedding,
                 match_count: Math.min(matchCount || 3, 3),
-                match_threshold: 0.5,
+                match_threshold: 0.25,
                 filter_category: category || null,
-                filter_tags: tags || null,
                 filter_max_time: maxTime || null,
             };
 
@@ -61,7 +55,6 @@ Use when user asks for recipes or mentions ingredients. This tool returns a stru
                     match_count: params.match_count,
                     match_threshold: params.match_threshold,
                     filter_category: params.filter_category,
-                    filter_tags: params.filter_tags,
                     filter_max_time: params.filter_max_time,
                 }),
             );
@@ -98,7 +91,10 @@ Use when user asks for recipes or mentions ingredients. This tool returns a stru
 
             if (recipes.length === 0) {
                 console.log('⚠️ No recipes found for query:', searchQuery);
-                return { recipes: [], message: `No recipes found for "${searchQuery}". Suggest the user try different search terms.` };
+                return {
+                    recipes: [],
+                    message: `No recipes found for "${searchQuery}". Suggest the user try different search terms.`,
+                };
             }
 
             return { recipes };

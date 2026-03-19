@@ -1,5 +1,5 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import OpenAI from 'jsr:@openai/openai';
+import OpenAI from 'npm:openai';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const corsHeaders = {
@@ -45,19 +45,13 @@ const RESPONSE_SCHEMA = {
                         description:
                             'Exact category filter. Must be one of: Pasta, Soups, Salads, Main Dishes, Desserts, Breakfast. Use null if not specified.',
                     },
-                    tags: {
-                        type: ['array', 'null'],
-                        items: { type: 'string' },
-                        description:
-                            'Tags to filter by (e.g., ["quick", "vegetarian", "spicy"]). Use null if not specified.',
-                    },
                     max_time: {
                         type: ['integer', 'null'],
                         description:
                             'Maximum total cooking time in minutes (prep + cook). Extract from phrases like "under 30 minutes", "quick", "fast". Use null if not specified.',
                     },
                 },
-                required: ['category', 'tags', 'max_time'],
+                required: ['category', 'max_time'],
                 additionalProperties: false,
                 description: 'Structured filters for exact matching',
             },
@@ -86,7 +80,6 @@ INTENTS:
 FOR SEARCH_RECIPES:
 1. Extract FILTERS (exact matching):
    - category: Must match exactly: "Pasta", "Soups", "Salads", "Main Dishes", "Desserts", "Breakfast"
-   - tags: Keywords like ["quick", "vegetarian", "spicy", "comfort food"]
    - max_time: Convert time phrases ("under 30 minutes" → 30, "quick" → 20)
 
 2. Extract search_query (semantic search):
@@ -99,7 +92,7 @@ FOR SEARCH_RECIPES:
 EXAMPLES:
 - "desserts under 30 minutes" → filters: {category: "Desserts", max_time: 30}, search_query: "sweet treat"
 - "something with chicken" → filters: {category: null, max_time: null}, search_query: "chicken"
-- "quick vegetarian soup" → filters: {category: "Soups", tags: ["vegetarian"], max_time: 20}, search_query: "vegetarian broth"
+- "quick vegetarian soup" → filters: {category: "Soups", max_time: 20}, search_query: "vegetarian broth"
 
 FOR OTHER INTENTS:
 - search_query and filters must be null
@@ -190,7 +183,6 @@ Deno.serve(async (req: Request) => {
             match_count,
             match_threshold,
             filter_category: filters.category || null,
-            filter_tags: filters.tags || null,
             filter_max_time: filters.max_time || null,
         });
 
@@ -208,7 +200,6 @@ Deno.serve(async (req: Request) => {
                     query: analysis.search_query,
                     filters: {
                         category: filters.category || null,
-                        tags: filters.tags || null,
                         max_time: filters.max_time || null,
                     },
                     resultCount,
