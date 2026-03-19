@@ -7,6 +7,7 @@
         "build": "ng build",
         "watch": "ng build --watch --configuration development",
         "test": "ng test",
+        "test:chat": "deno test --no-check --allow-env --allow-net supabase/functions/chat/_tests/",
         "import-supabase-types": "supabase gen types typescript --linked --schema public > ./src/app/models/database.types.ts"
     },
     "private": true,

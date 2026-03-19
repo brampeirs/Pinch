@@ -70,7 +70,7 @@ Use when user asks for recipes or mentions ingredients. This tool returns a stru
 
             if (error) {
                 console.error('❌ Search error:', error);
-                return [];
+                return { recipes: [], message: `Search failed: ${error.message}` };
             }
 
             const recipes =
@@ -96,7 +96,12 @@ Use when user asks for recipes or mentions ingredients. This tool returns a stru
                     }),
                 ) || [];
 
-            return recipes;
+            if (recipes.length === 0) {
+                console.log('⚠️ No recipes found for query:', searchQuery);
+                return { recipes: [], message: `No recipes found for "${searchQuery}". Suggest the user try different search terms.` };
+            }
+
+            return { recipes };
         },
     });
 }

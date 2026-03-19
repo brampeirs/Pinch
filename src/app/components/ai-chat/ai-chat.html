@@ -156,7 +156,7 @@
 
                             <!-- Find recipe tool - only show output (loading is handled globally) -->
                             @if (part.type === 'tool-findRecipe' && $any(part).state === 'output-available') {
-                                @let recipes = $any(part).output;
+                                @let recipes = $any(part).output?.recipes;
                                 <!-- Recipe cards -->
                                 @if (recipes?.length) {
                                     <div class="grid gap-2">
@@ -231,9 +231,9 @@
             }
 
             <!-- Tool Activity Log - shows what the AI is doing -->
-            <!-- @if (isLoading && currentToolActivities.length > 0) {
+            @if (isLoading && currentToolActivities.length > 0) {
                 <app-tool-activity-log [activities]="currentToolActivities" />
-            } -->
+            }
 
             <!-- Loading indicators wrapper - fixed height to prevent layout shift -->
             <div

@@ -25,7 +25,7 @@ Returns a list of categories with their ID, name, emoji, and description.`,
                     success: false,
                     error: error.message,
                     categories: [],
-                    message: 'Er is een fout opgetreden bij het ophalen van categorieën.',
+                    message: 'An error occurred while fetching categories.',
                 };
             }
 
@@ -33,7 +33,7 @@ Returns a list of categories with their ID, name, emoji, and description.`,
 
             return {
                 success: true,
-                message: `Er zijn ${categories?.length ?? 0} categorieën beschikbaar.`,
+                message: `${categories?.length ?? 0} categories available.`,
                 categories:
                     categories?.map((c) => ({
                         id: c.id,

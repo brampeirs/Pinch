@@ -10,10 +10,10 @@ import { z } from 'npm:zod';
  */
 export const ingredientSchema = z.object({
     name: z.string().min(1, 'Ingredient name is required'),
-    amount: z.number().optional(),
-    unit: z.string().optional(),
-    sort_order: z.number().optional(),
-    section_name: z.string().optional(), // e.g., "De Saus", "Het Deeg"
+    amount: z.number().optional().nullable(),
+    unit: z.string().optional().nullable(),
+    sort_order: z.number().optional().nullable(),
+    section_name: z.string().optional().nullable(), // e.g., "De Saus", "Het Deeg"
 });
 
 /**
@@ -22,7 +22,7 @@ export const ingredientSchema = z.object({
 export const stepSchema = z.object({
     step_number: z.number(),
     description: z.string().min(1, 'Step description is required'),
-    section_name: z.string().optional(), // e.g., "Voorbereiding", "De Saus"
+    section_name: z.string().optional().nullable(), // e.g., "Voorbereiding", "De Saus"
 });
 
 /**
@@ -76,12 +76,13 @@ export const createRecipeToolInputSchema = z.object({
         .array(
             ingredientSchema.extend({
                 name: z.string().describe('Ingredient name, e.g. "flour", "butter"'),
-                amount: z.number().optional().describe('Quantity amount, e.g. 2, 0.5'),
-                unit: z.string().optional().describe('Unit of measurement, e.g. "cups", "tbsp", "g"'),
-                sort_order: z.number().optional().describe('Order in the list (auto-assigned if not provided)'),
+                amount: z.number().optional().nullable().describe('Quantity amount, e.g. 2, 0.5'),
+                unit: z.string().optional().nullable().describe('Unit of measurement, e.g. "cups", "tbsp", "g"'),
+                sort_order: z.number().optional().nullable().describe('Order in the list (auto-assigned if not provided)'),
                 section_name: z
                     .string()
                     .optional()
+                    .nullable()
                     .describe('Section name for grouping, e.g. "De Saus", "Het Deeg". Use for complex recipes.'),
             }),
         )
@@ -95,6 +96,7 @@ export const createRecipeToolInputSchema = z.object({
                 section_name: z
                     .string()
                     .optional()
+                    .nullable()
                     .describe('Section name for grouping, e.g. "Voorbereiding", "De Saus". Use for complex recipes.'),
             }),
         )

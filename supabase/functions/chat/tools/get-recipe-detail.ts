@@ -24,7 +24,7 @@ Returns the complete recipe with all ingredients and preparation steps.`,
             if (!targetRecipeId) {
                 return {
                     success: false,
-                    message: 'Geen recept ID opgegeven en geen context recept beschikbaar.',
+                    message: 'No recipe ID provided and no context recipe available.',
                     recipe: null,
                 };
             }
@@ -46,7 +46,7 @@ Returns the complete recipe with all ingredients and preparation steps.`,
                 console.error('❌ Error fetching recipe:', error);
                 return {
                     success: false,
-                    message: `Recept niet gevonden: ${error.message}`,
+                    message: `Recipe not found: ${error.message}`,
                     recipe: null,
                 };
             }
@@ -54,7 +54,7 @@ Returns the complete recipe with all ingredients and preparation steps.`,
             if (!data) {
                 return {
                     success: false,
-                    message: 'Recept niet gevonden.',
+                    message: 'Recipe not found.',
                     recipe: null,
                 };
             }
@@ -83,7 +83,7 @@ Returns the complete recipe with all ingredients and preparation steps.`,
 
             return {
                 success: true,
-                message: `Details voor "${data.title}" opgehaald.`,
+                message: `Retrieved details for "${data.title}".`,
                 recipe: {
                     id: data.id,
                     title: data.title,
