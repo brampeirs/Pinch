@@ -225,28 +225,67 @@
             </div>
         </section>
 
-        <section class="mx-auto max-w-6xl px-6 pt-8">
+        <section class="mx-auto max-w-6xl px-6 pb-10 pt-8">
             @if (error()) {
                 <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 shadow-sm">
                     {{ error() }}
                 </div>
             }
-        </section>
 
-        <section class="mx-auto max-w-6xl px-6 py-10">
             <section>
-                <div class="mb-5 max-w-2xl">
-                    <span
-                        class="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-indigo-700"
-                    >
-                        Ingredients
-                    </span>
-                    <h2 class="mt-4 text-2xl font-bold tracking-tight text-slate-900">
-                        Paste on the left, refine on the right
-                    </h2>
-                    <p class="mt-2 text-slate-600">
-                        Parse the raw list, then immediately clean it up in the manual editor beside it.
-                    </p>
+                <div class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div class="max-w-2xl">
+                        <span
+                            class="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-indigo-700"
+                        >
+                            Ingredients
+                        </span>
+                        <h2 class="mt-4 text-2xl font-bold tracking-tight text-slate-900">
+                            Paste on the left, refine on the right
+                        </h2>
+                        <p class="mt-2 text-slate-600">
+                            Parse the raw list, then immediately clean it up in the manual editor beside it.
+                        </p>
+                    </div>
+
+                    <div class="flex flex-col-reverse gap-3 sm:flex-row lg:shrink-0">
+                        <a
+                            [routerLink]="backLink()"
+                            class="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+                        >
+                            Cancel
+                        </a>
+                        <button
+                            type="submit"
+                            [disabled]="saving()"
+                            class="inline-flex items-center justify-center rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            @if (saving()) {
+                                <span class="flex items-center gap-2">
+                                    <svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle
+                                            class="opacity-25"
+                                            cx="12"
+                                            cy="12"
+                                            r="10"
+                                            stroke="currentColor"
+                                            stroke-width="4"
+                                        ></circle>
+                                        <path
+                                            class="opacity-75"
+                                            fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                        ></path>
+                                    </svg>
+                                    Saving...
+                                </span>
+                            } @else if (isEditMode()) {
+                                Save changes
+                            } @else {
+                                Save recipe
+                            }
+                        </button>
+                    </div>
                 </div>
 
                 <div class="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] xl:items-start">
@@ -520,45 +559,6 @@
                     </section>
                 </div>
             </section>
-
-            <div class="mt-10 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <a
-                    [routerLink]="backLink()"
-                    class="inline-flex items-center justify-center rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-                >
-                    Cancel
-                </a>
-                <button
-                    type="submit"
-                    [disabled]="saving()"
-                    class="inline-flex items-center justify-center rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    @if (saving()) {
-                        <span class="flex items-center gap-2">
-                            <svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                <circle
-                                    class="opacity-25"
-                                    cx="12"
-                                    cy="12"
-                                    r="10"
-                                    stroke="currentColor"
-                                    stroke-width="4"
-                                ></circle>
-                                <path
-                                    class="opacity-75"
-                                    fill="currentColor"
-                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                ></path>
-                            </svg>
-                            Saving...
-                        </span>
-                    } @else if (isEditMode()) {
-                        Save changes
-                    } @else {
-                        Save recipe
-                    }
-                </button>
-            </div>
         </section>
     </form>
 </main>

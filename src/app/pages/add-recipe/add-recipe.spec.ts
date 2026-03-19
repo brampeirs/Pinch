@@ -42,7 +42,7 @@ describe('AddRecipePage', () => {
         expect(text).toContain('Upload cover image');
         expect(heroTitleInput?.getAttribute('placeholder')).toBe('Your recipe title');
         expect(heroCategorySelect).not.toBeNull();
-        expect(heroDescription?.getAttribute('placeholder')).toContain('Paste ingredients and instructions below');
+        expect(heroDescription?.getAttribute('placeholder')).toBe('Short description of the recipe...');
         expect(heroPrepTime?.getAttribute('placeholder')).toBe('15');
         expect(heroCookTime?.getAttribute('placeholder')).toBe('30');
         expect(heroServings?.getAttribute('placeholder')).toBe('4');

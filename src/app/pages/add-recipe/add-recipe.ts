@@ -97,9 +97,7 @@ export class AddRecipePage implements OnInit {
             return description;
         }
 
-        return this.isEditMode()
-            ? 'Update the details, ingredients, and instructions below.'
-            : 'Paste ingredients and instructions below, then let AI turn them into a polished draft.';
+        return 'Short description of the recipe...';
     });
     coverButtonLabel = computed(() => {
         if (this.uploadingImage()) {
