@@ -43,6 +43,12 @@ export async function routeIntent(
         return { reasoning: 'User attached images — likely creating a recipe', type: 'create' };
     }
 
+    // Emoji-only messages (e.g. "🍝", "🍜🥗") are always search
+    const emojiOnly = /^\p{Emoji_Presentation}[\p{Emoji_Presentation}\s]*$/u;
+    if (emojiOnly.test(userMessage.trim())) {
+        return { reasoning: 'Emoji-only input — treating as recipe search', type: 'search' };
+    }
+
     // Build context hints for the router
     const contextParts: string[] = [];
     if (hasContextRecipeId) {
