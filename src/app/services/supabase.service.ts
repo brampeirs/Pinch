@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import type { FetchFunction } from '@ai-sdk/provider-utils';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
 import { Database } from '../models/database.types';
@@ -19,6 +20,21 @@ interface CreateRecipeEdgeFunctionResponse {
     error?: string;
 }
 
+export interface UploadedRecipeImage {
+    url: string;
+    mediaType: string;
+}
+
+export interface CreateRecipeFromImagesStreamResult {
+    imagesReceived?: boolean;
+    analyzingImages?: boolean;
+    extractingRecipe?: boolean;
+    choosingCover?: boolean;
+    savingRecipe?: boolean;
+    recipeId?: string;
+    error?: string;
+}
+
 export interface ParsedIngredient {
     name: string;
     amount: number | null;
@@ -31,22 +47,36 @@ export interface ParsedStep {
     section_name: string | null;
 }
 
-interface ParseRecipeStreamEvent<TItem> {
-    partial?: {
-        items?: TItem[];
-    };
-    done?: boolean;
-    error?: string;
-}
-
 @Injectable({
     providedIn: 'root',
 })
 export class SupabaseService {
     private supabase: SupabaseClient<Database>;
+    readonly createRecipeFromImagesStreamFetch = this.createEdgeFunctionStreamFetch('create-recipe-from-images');
+    readonly parseRecipeStreamFetch = this.createEdgeFunctionStreamFetch('parse-recipe');
 
     constructor() {
         this.supabase = createClient<Database>(environment.supabase.url, environment.supabase.anonKey);
+    }
+
+    private createEdgeFunctionStreamFetch(functionName: string): FetchFunction {
+        return async (_input, init) => {
+            const headers = new Headers(init?.headers);
+            const {
+                data: { session },
+            } = await this.supabase.auth.getSession();
+
+            headers.set('apikey', environment.supabase.anonKey);
+
+            if (session?.access_token) {
+                headers.set('Authorization', `Bearer ${session.access_token}`);
+            }
+
+            return fetch(`${environment.supabase.url}/functions/v1/${functionName}`, {
+                ...init,
+                headers,
+            });
+        };
     }
 
     get client(): SupabaseClient {
@@ -368,92 +398,5 @@ export class SupabaseService {
         }
 
         return data;
-    }
-
-    // ============ AI PARSING (STREAMING) ============
-    parseRecipeTextStream(text: string, type: 'ingredients'): AsyncGenerator<ParseRecipeStreamEvent<ParsedIngredient>>;
-    parseRecipeTextStream(text: string, type: 'steps'): AsyncGenerator<ParseRecipeStreamEvent<ParsedStep>>;
-    async *parseRecipeTextStream(
-        text: string,
-        type: 'ingredients' | 'steps',
-    ): AsyncGenerator<ParseRecipeStreamEvent<ParsedIngredient | ParsedStep>> {
-        const url = `${environment.supabase.url}/functions/v1/parse-recipe`;
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                apikey: environment.supabase.anonKey,
-            },
-            body: JSON.stringify({ text, type }),
-        });
-
-        if (!response.ok) {
-            yield { error: `HTTP error: ${response.status}` };
-            return;
-        }
-
-        const reader = response.body?.getReader();
-        if (!reader) {
-            yield { error: 'No response body' };
-            return;
-        }
-
-        const parseEvent = (data: string): ParseRecipeStreamEvent<ParsedIngredient | ParsedStep> | null => {
-            if (data === '[DONE]') {
-                return { done: true };
-            }
-
-            try {
-                return JSON.parse(data) as ParseRecipeStreamEvent<ParsedIngredient | ParsedStep>;
-            } catch {
-                return null;
-            }
-        };
-
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-
-            const messages = buffer.split('\n\n');
-            buffer = messages.pop() || '';
-
-            for (const message of messages) {
-                const data = message
-                    .split('\n')
-                    .filter((line) => line.startsWith('data: '))
-                    .map((line) => line.slice(6))
-                    .join('\n');
-
-                if (!data) {
-                    continue;
-                }
-
-                const event = parseEvent(data);
-                if (!event) {
-                    continue;
-                }
-
-                yield event;
-
-                if (event.done || event.error) {
-                    return;
-                }
-            }
-        }
-
-        if (!buffer.startsWith('data: ')) {
-            return;
-        }
-
-        const event = parseEvent(buffer.slice(6));
-        if (event) {
-            yield event;
-        }
     }
 }

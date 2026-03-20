@@ -25,7 +25,8 @@ describe('NewRecipeChooserPage', () => {
         expect(text).toContain('Upload photos');
         expect(text).toContain('Import from link');
         expect(text).toContain('Write or paste');
-        expect(element.querySelectorAll('button[disabled]').length).toBe(2);
+        expect(element.querySelectorAll('button[disabled]').length).toBe(1);
+        expect(element.querySelector('a[href="/recipes/new/upload"]')).toBeTruthy();
         expect(element.querySelector('a[href="/recipes/new/manual"]')).toBeTruthy();
     });
 });

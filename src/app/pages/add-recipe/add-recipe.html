@@ -310,7 +310,7 @@
                         <button
                             type="button"
                             (click)="parseIngredients()"
-                            [disabled]="parsingIngredients() || !rawIngredientsText().trim()"
+                            [disabled]="!canParseIngredients()"
                             class="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             @if (parsingIngredients()) {
@@ -460,7 +460,7 @@
                         <button
                             type="button"
                             (click)="parseSteps()"
-                            [disabled]="parsingSteps() || !rawStepsText().trim()"
+                            [disabled]="!canParseSteps()"
                             class="mt-4 inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             @if (parsingSteps()) {

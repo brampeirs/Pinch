@@ -1,0 +1,248 @@
+<main class="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100/70 py-12">
+    <section class="mx-auto max-w-6xl px-6">
+        <a
+            routerLink="/recipes/new"
+            class="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
+        >
+            <span aria-hidden="true">←</span>
+            Back to options
+        </a>
+
+        <div class="mx-auto mt-10 max-w-3xl text-center">
+            <span
+                class="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"
+            >
+                Upload photos
+            </span>
+            <h1 class="mt-6 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+                Create a recipe from photos
+            </h1>
+            <p class="mt-4 text-lg text-slate-600">Upload a few clear photos to get started.</p>
+        </div>
+
+        <div class="mx-auto mt-10 max-w-4xl space-y-6">
+            @if (creationState() === 'idle') {
+                <div
+                    class="rounded-[2rem] border border-slate-200/80 bg-white/90 p-5 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.45)] backdrop-blur"
+                >
+                    <input
+                        #fileInput
+                        type="file"
+                        multiple
+                        accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                        class="hidden"
+                        (change)="onFilesSelected($event)"
+                    />
+
+                    @if (validationMessage(); as validationMessage) {
+                        <div
+                            class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+                            role="alert"
+                            aria-live="polite"
+                        >
+                            {{ validationMessage }}
+                        </div>
+                    }
+
+                    @if (!hasImages()) {
+                        <button
+                            type="button"
+                            (click)="fileInput.click()"
+                            (dragover)="onDragOver($event)"
+                            (dragleave)="onDragLeave($event)"
+                            (drop)="onFilesDropped($event)"
+                            class="flex w-full flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed px-6 py-16 text-center transition-all duration-200"
+                            [class.mt-4]="validationMessage() !== null"
+                            [class.border-slate-300]="!isDragActive()"
+                            [class.bg-slate-50/80]="!isDragActive()"
+                            [class.border-slate-900]="isDragActive()"
+                            [class.bg-slate-100]="isDragActive()"
+                            aria-label="Select recipe photos"
+                        >
+                            <span
+                                class="inline-flex h-14 w-14 items-center justify-center rounded-full border border-slate-200 bg-white text-2xl text-slate-700 shadow-sm"
+                                aria-hidden="true"
+                            >
+                                ↑
+                            </span>
+                            <h2 class="mt-5 text-2xl font-semibold text-slate-900">Drop photos here</h2>
+                            <p class="mt-2 text-sm text-slate-500">or click to browse</p>
+                            <p class="mt-4 text-xs font-medium uppercase tracking-[0.24em] text-slate-400">
+                                JPG, PNG, WebP
+                            </p>
+                        </button>
+                    } @else {
+                        <div>
+                            <h2 class="text-lg font-semibold text-slate-900">Photos</h2>
+                            <p class="mt-1 text-sm text-slate-500">
+                                {{ selectedCountLabel() }}
+                                @if (uploadSummaryLabel(); as uploadSummaryLabel) {
+                                    <span aria-hidden="true"> · </span>
+                                    <span>{{ uploadSummaryLabel }}</span>
+                                }
+                            </p>
+                        </div>
+
+                        <div class="mt-5 flex flex-wrap gap-3">
+                            <button
+                                type="button"
+                                (click)="fileInput.click()"
+                                (dragover)="onDragOver($event)"
+                                (dragleave)="onDragLeave($event)"
+                                (drop)="onFilesDropped($event)"
+                                class="flex h-24 w-24 shrink-0 flex-col items-center justify-center rounded-2xl border-2 border-dashed text-center transition-all duration-200"
+                                [class.border-slate-300]="!isDragActive()"
+                                [class.bg-slate-50/80]="!isDragActive()"
+                                [class.border-slate-900]="isDragActive()"
+                                [class.bg-slate-100]="isDragActive()"
+                                aria-label="Select recipe photos"
+                            >
+                                <span class="text-2xl font-light text-slate-700" aria-hidden="true">+</span>
+                                <span class="mt-1 text-xs font-semibold text-slate-600">Upload</span>
+                            </button>
+
+                            @for (image of selectedImages(); track image.id) {
+                                <article
+                                    class="group relative h-24 w-24 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm"
+                                >
+                                    <img
+                                        [src]="image.previewUrl"
+                                        [alt]="image.file.name"
+                                        class="h-full w-full object-cover"
+                                    />
+
+                                    @if (image.status === 'completed') {
+                                        <span
+                                            class="absolute bottom-1.5 left-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/90 text-white shadow-sm"
+                                            title="Uploaded"
+                                        >
+                                            <svg
+                                                aria-hidden="true"
+                                                viewBox="0 0 16 16"
+                                                class="h-3.5 w-3.5"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                            >
+                                                <path d="M3.5 8.5 6.5 11.5 12.5 4.5" />
+                                            </svg>
+                                        </span>
+                                    }
+
+                                    @if (image.status === 'uploading') {
+                                        <div
+                                            class="absolute inset-x-0 bottom-0 bg-slate-950/75 px-2 py-1 text-[10px] font-semibold text-white"
+                                        >
+                                            Uploading {{ image.progress }}%
+                                        </div>
+                                    }
+
+                                    @if (image.status === 'error') {
+                                        <div
+                                            class="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-rose-600/95 px-2 py-1 text-[10px] font-semibold text-white"
+                                        >
+                                            <span>Failed</span>
+                                            <button
+                                                type="button"
+                                                (click)="retryUpload(image.id)"
+                                                class="rounded-full bg-white/20 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.16em] transition-colors hover:bg-white/30"
+                                                [attr.aria-label]="'Retry upload for ' + image.file.name"
+                                            >
+                                                Retry
+                                            </button>
+                                        </div>
+                                    }
+
+                                    <button
+                                        type="button"
+                                        (click)="removeImage(image.id)"
+                                        class="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-950/80 text-base leading-none text-white transition-colors hover:bg-slate-950"
+                                        [attr.aria-label]="'Remove ' + image.file.name"
+                                    >
+                                        <svg
+                                            aria-hidden="true"
+                                            viewBox="0 0 16 16"
+                                            class="h-3.5 w-3.5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="1.75"
+                                            stroke-linecap="round"
+                                        >
+                                            <path d="M4 4l8 8M12 4L4 12" />
+                                        </svg>
+                                    </button>
+                                </article>
+                            }
+                        </div>
+
+                        <div class="mt-5 flex flex-col gap-3 sm:flex-row">
+                            <button
+                                type="button"
+                                (click)="createDraftPreview()"
+                                [disabled]="!canCreateDraft()"
+                                class="inline-flex items-center justify-center whitespace-nowrap rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                            >
+                                {{ createButtonLabel() }}
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (creationState() === 'creating') {
+                <div
+                    class="rounded-3xl border border-slate-200 bg-slate-950 p-6 text-white shadow-sm"
+                    aria-live="polite"
+                >
+                    <div class="flex items-center gap-3">
+                        <span
+                            class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10"
+                        >
+                            <span
+                                class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
+                            ></span>
+                        </span>
+                        <div>
+                            <h2 class="text-lg font-semibold">Creating your recipe</h2>
+                            <p class="text-sm text-white/70">
+                                {{ creationDescription() }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <ol class="mt-5 space-y-3">
+                        @for (stage of creationStages(); track stage.label; let index = $index) {
+                            <li
+                                class="flex items-center gap-3 rounded-2xl border px-3 py-3 transition-colors"
+                                [class.border-white/20]="stage.status === 'pending'"
+                                [class.bg-white/5]="stage.status === 'pending'"
+                                [class.border-emerald-400/50]="stage.status === 'active'"
+                                [class.bg-emerald-400/10]="stage.status === 'active'"
+                                [class.border-white/30]="stage.status === 'complete'"
+                                [class.bg-white/10]="stage.status === 'complete'"
+                                [attr.aria-current]="stage.status === 'active' ? 'step' : null"
+                            >
+                                <span
+                                    class="inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold"
+                                    [class.bg-white/10]="stage.status === 'pending'"
+                                    [class.bg-emerald-400]="stage.status === 'active'"
+                                    [class.bg-white]="stage.status === 'complete'"
+                                    [class.text-slate-950]="stage.status !== 'pending'"
+                                >
+                                    @if (stage.status === 'complete') {
+                                        <span aria-hidden="true">✓</span>
+                                    } @else {
+                                        {{ index + 1 }}
+                                    }
+                                </span>
+                                <span class="text-sm font-medium">{{ stage.label }}</span>
+                            </li>
+                        }
+                    </ol>
+                </div>
+            }
+        </div>
+    </section>
+</main>

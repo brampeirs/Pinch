@@ -4,10 +4,49 @@ import { vi } from 'vitest';
 import { AddRecipePage } from './add-recipe';
 import { SupabaseService } from '../../services/supabase.service';
 
-async function* createStream<T>(chunks: T[]) {
-    for (const chunk of chunks) {
-        yield chunk;
-    }
+async function flushPromises() {
+    await Promise.resolve();
+    await Promise.resolve();
+}
+
+function createStructuredObjectStreamResponse(chunks: string[]) {
+    const encoder = new TextEncoder();
+
+    return new Response(
+        new ReadableStream({
+            start(controller) {
+                chunks.forEach((chunk) => controller.enqueue(encoder.encode(chunk)));
+                controller.close();
+            },
+        }),
+        {
+            status: 200,
+            headers: {
+                'Content-Type': 'text/plain; charset=utf-8',
+            },
+        },
+    );
+}
+
+function createDeferredStructuredObjectStream() {
+    const encoder = new TextEncoder();
+    const transformStream = new TransformStream<Uint8Array, Uint8Array>();
+    const writer = transformStream.writable.getWriter();
+
+    return {
+        response: new Response(transformStream.readable, {
+            status: 200,
+            headers: {
+                'Content-Type': 'text/plain; charset=utf-8',
+            },
+        }),
+        async push(chunk: string) {
+            await writer.write(encoder.encode(chunk));
+        },
+        async close() {
+            await writer.close();
+        },
+    };
 }
 
 describe('AddRecipePage', () => {
@@ -18,12 +57,12 @@ describe('AddRecipePage', () => {
         updateRecipe: vi.fn(),
         createRecipe: vi.fn(),
         uploadRecipeImage: vi.fn(),
-        parseRecipeTextStream: vi.fn(),
+        parseRecipeStreamFetch: vi.fn(),
     };
 
     beforeEach(async () => {
         supabaseService.getCategories.mockResolvedValue({ data: [], error: null });
-        supabaseService.parseRecipeTextStream.mockReset();
+        supabaseService.parseRecipeStreamFetch.mockReset();
 
         await TestBed.configureTestingModule({
             imports: [AddRecipePage],
@@ -63,22 +102,38 @@ describe('AddRecipePage', () => {
 
     it('streams parsed ingredients as structured partial objects', async () => {
         const component = fixture.componentInstance;
+        const stream = createDeferredStructuredObjectStream();
         const parsedIngredients = [
             { name: 'flour', amount: 500, unit: 'g', section_name: 'Dough' },
             { name: 'water', amount: 300, unit: 'ml', section_name: 'Dough' },
         ];
 
         component.rawIngredientsText.set('500g flour\n300ml water');
-        supabaseService.parseRecipeTextStream.mockReturnValue(
-            createStream([
-                { partial: { items: [parsedIngredients[0]] } },
-                { partial: { items: parsedIngredients }, done: true },
-            ]),
-        );
+        supabaseService.parseRecipeStreamFetch.mockResolvedValueOnce(stream.response);
 
-        await component.parseIngredients();
+        const parsePromise = component.parseIngredients();
+        await flushPromises();
 
-        expect(supabaseService.parseRecipeTextStream).toHaveBeenCalledWith('500g flour\n300ml water', 'ingredients');
+        expect(component.parsingIngredients()).toBe(true);
+        expect(supabaseService.parseRecipeStreamFetch).toHaveBeenCalledTimes(1);
+        expect(supabaseService.parseRecipeStreamFetch.mock.calls[0][0]).toBe('parse-recipe');
+        expect(JSON.parse(supabaseService.parseRecipeStreamFetch.mock.calls[0][1].body as string)).toEqual({
+            text: '500g flour\n300ml water',
+            type: 'ingredients',
+        });
+
+        await stream.push(JSON.stringify({ items: parsedIngredients }));
+        await flushPromises();
+        fixture.detectChanges();
+
+        expect(component.ingredients()).toEqual(parsedIngredients);
+        expect(component.rawIngredientsText()).toBe('500g flour\n300ml water');
+        expect(component.error()).toBeNull();
+
+        await stream.close();
+        await parsePromise;
+        await flushPromises();
+
         expect(component.ingredients()).toEqual(parsedIngredients);
         expect(component.rawIngredientsText()).toBe('');
         expect(component.error()).toBeNull();
@@ -93,16 +148,18 @@ describe('AddRecipePage', () => {
         ];
 
         component.rawStepsText.set('Mix everything together. Bake until golden.');
-        supabaseService.parseRecipeTextStream.mockReturnValue(
-            createStream([{ partial: { items: parsedSteps } }, { done: true }]),
+        supabaseService.parseRecipeStreamFetch.mockResolvedValueOnce(
+            createStructuredObjectStreamResponse([JSON.stringify({ items: parsedSteps })]),
         );
 
         await component.parseSteps();
 
-        expect(supabaseService.parseRecipeTextStream).toHaveBeenCalledWith(
-            'Mix everything together. Bake until golden.',
-            'steps',
-        );
+        expect(supabaseService.parseRecipeStreamFetch).toHaveBeenCalledTimes(1);
+        expect(supabaseService.parseRecipeStreamFetch.mock.calls[0][0]).toBe('parse-recipe');
+        expect(JSON.parse(supabaseService.parseRecipeStreamFetch.mock.calls[0][1].body as string)).toEqual({
+            text: 'Mix everything together. Bake until golden.',
+            type: 'steps',
+        });
         expect(component.steps()).toEqual(parsedSteps);
         expect(component.rawStepsText()).toBe('');
         expect(component.error()).toBeNull();
@@ -113,7 +170,14 @@ describe('AddRecipePage', () => {
         const component = fixture.componentInstance;
 
         component.rawIngredientsText.set('broken ingredient text');
-        supabaseService.parseRecipeTextStream.mockReturnValue(createStream([{ error: 'bad response' }]));
+        supabaseService.parseRecipeStreamFetch.mockResolvedValueOnce(
+            new Response(JSON.stringify({ error: 'bad response' }), {
+                status: 500,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            }),
+        );
 
         await component.parseIngredients();
 

@@ -1,5 +1,5 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import { createGateway, streamObject } from 'npm:ai';
+import { createGateway, Output, streamText } from 'npm:ai';
 import { createOpenAI } from 'npm:@ai-sdk/openai';
 import { z } from 'jsr:@zod/zod';
 
@@ -85,7 +85,6 @@ Deno.serve(async (req: Request) => {
             throw new Error('Missing text or type parameter');
         }
 
-        const schema = type === 'ingredients' ? IngredientsResponseSchema : StepsResponseSchema;
         const prompt = type === 'ingredients' ? INGREDIENTS_PROMPT : STEPS_PROMPT;
         const userMessage =
             type === 'ingredients'
@@ -93,42 +92,27 @@ Deno.serve(async (req: Request) => {
                 : `Parse the following recipe steps:\n\n${text}`;
 
         const model = createModel();
+        const result =
+            type === 'ingredients'
+                ? streamText({
+                      model,
+                      output: Output.object({ schema: IngredientsResponseSchema }),
+                      system: prompt,
+                      prompt: userMessage,
+                      abortSignal: req.signal,
+                  })
+                : streamText({
+                      model,
+                      output: Output.object({ schema: StepsResponseSchema }),
+                      system: prompt,
+                      prompt: userMessage,
+                      abortSignal: req.signal,
+                  });
 
-        const stream = new ReadableStream({
-            async start(controller) {
-                const encoder = new TextEncoder();
-
-                try {
-                    const result = streamObject({
-                        model,
-                        schema,
-                        system: prompt,
-                        prompt: userMessage,
-                    });
-
-                    for await (const partialObject of result.partialObjectStream) {
-                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ partial: partialObject })}\n\n`));
-                    }
-
-                    const finalObject = await result.object;
-                    controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ partial: finalObject, done: true })}\n\n`),
-                    );
-                    controller.close();
-                } catch (error) {
-                    const message = error instanceof Error ? error.message : 'Stream error';
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`));
-                    controller.close();
-                }
-            },
-        });
-
-        return new Response(stream, {
+        return result.toTextStreamResponse({
             headers: {
                 ...corsHeaders,
-                'Content-Type': 'text/event-stream',
                 'Cache-Control': 'no-cache',
-                Connection: 'keep-alive',
             },
         });
     } catch (error) {

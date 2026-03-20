@@ -1,8 +1,54 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { StructuredObject } from '@ai-sdk/angular';
+import {
+    ChangeDetectionStrategy,
+    Component,
+    DestroyRef,
+    computed,
+    effect,
+    inject,
+    OnInit,
+    signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
+import { z } from 'zod';
 import { SupabaseService } from '../../services/supabase.service';
+
+const parsedIngredientSchema = z.object({
+    name: z.string(),
+    amount: z.number().nullable(),
+    unit: z.string(),
+    section_name: z.string().nullable(),
+});
+
+const parsedIngredientsSchema = z.object({
+    items: z.array(parsedIngredientSchema),
+});
+
+const parsedStepSchema = z.object({
+    description: z.string(),
+    section_name: z.string().nullable(),
+});
+
+const parsedStepsSchema = z.object({
+    items: z.array(parsedStepSchema),
+});
+
+type ParsedIngredientResult = z.infer<typeof parsedIngredientSchema>;
+type ParsedIngredientsResult = z.infer<typeof parsedIngredientsSchema>;
+type ParsedStepResult = z.infer<typeof parsedStepSchema>;
+type ParsedStepsResult = z.infer<typeof parsedStepsSchema>;
+
+interface ParseIngredientsRequest {
+    text: string;
+    type: 'ingredients';
+}
+
+interface ParseStepsRequest {
+    text: string;
+    type: 'steps';
+}
 
 interface IngredientForm {
     name: string;
@@ -23,9 +69,52 @@ interface StepForm {
     templateUrl: './add-recipe.html',
 })
 export class AddRecipePage implements OnInit {
-    private supabase = inject(SupabaseService);
-    private router = inject(Router);
-    private route = inject(ActivatedRoute);
+    private readonly supabase = inject(SupabaseService);
+    private readonly router = inject(Router);
+    private readonly route = inject(ActivatedRoute);
+    private readonly destroyRef = inject(DestroyRef);
+    private readonly ingredientsParser = new StructuredObject<
+        typeof parsedIngredientsSchema,
+        ParsedIngredientsResult,
+        ParseIngredientsRequest
+    >({
+        api: 'parse-recipe',
+        schema: parsedIngredientsSchema,
+        fetch: this.supabase.parseRecipeStreamFetch,
+        onError: (error) => {
+            this.error.set(this.formatParserError(error));
+        },
+        onFinish: ({ object, error }) => {
+            if (error || !object) {
+                this.error.set(this.formatParserError(error));
+                return;
+            }
+
+            this.ingredients.set(object.items.map((ingredient) => this.toIngredientForm(ingredient)));
+            this.error.set(null);
+            this.rawIngredientsText.set('');
+        },
+    });
+    private readonly stepsParser = new StructuredObject<typeof parsedStepsSchema, ParsedStepsResult, ParseStepsRequest>(
+        {
+            api: 'parse-recipe',
+            schema: parsedStepsSchema,
+            fetch: this.supabase.parseRecipeStreamFetch,
+            onError: (error) => {
+                this.error.set(this.formatParserError(error));
+            },
+            onFinish: ({ object, error }) => {
+                if (error || !object) {
+                    this.error.set(this.formatParserError(error));
+                    return;
+                }
+
+                this.steps.set(object.items.map((step) => this.toStepForm(step)));
+                this.error.set(null);
+                this.rawStepsText.set('');
+            },
+        },
+    );
 
     // Edit mode
     isEditMode = signal(false);
@@ -60,8 +149,10 @@ export class AddRecipePage implements OnInit {
     // AI Parser state
     rawIngredientsText = signal('');
     rawStepsText = signal('');
-    parsingIngredients = signal(false);
-    parsingSteps = signal(false);
+    parsingIngredients = computed(() => this.ingredientsParser.loading);
+    parsingSteps = computed(() => this.stepsParser.loading);
+    canParseIngredients = computed(() => !this.parsingIngredients() && this.rawIngredientsText().trim().length > 0);
+    canParseSteps = computed(() => !this.parsingSteps() && this.rawStepsText().trim().length > 0);
 
     backLink = computed(() =>
         this.isEditMode() && this.recipeId() ? ['/recipes', this.recipeId()!] : ['/recipes/new'],
@@ -106,6 +197,33 @@ export class AddRecipePage implements OnInit {
 
         return this.imagePreview() ? 'Change cover image' : 'Upload cover image';
     });
+
+    constructor() {
+        effect(() => {
+            const items = this.ingredientsParser.object?.items;
+
+            if (!items) {
+                return;
+            }
+
+            this.ingredients.set(items.map((ingredient) => this.toIngredientForm(ingredient)));
+        });
+
+        effect(() => {
+            const items = this.stepsParser.object?.items;
+
+            if (!items) {
+                return;
+            }
+
+            this.steps.set(items.map((step) => this.toStepForm(step)));
+        });
+
+        this.destroyRef.onDestroy(() => {
+            this.ingredientsParser.stop();
+            this.stepsParser.stop();
+        });
+    }
 
     ngOnInit() {
         this.loadCategories();
@@ -206,7 +324,7 @@ export class AddRecipePage implements OnInit {
     updateStep(index: number, value: string) {
         this.steps.update((list) => {
             const updated = [...list];
-            updated[index] = { description: value };
+            updated[index] = { ...updated[index], description: value };
             return updated;
         });
     }
@@ -254,79 +372,70 @@ export class AddRecipePage implements OnInit {
 
     async parseIngredients() {
         const text = this.rawIngredientsText().trim();
-        if (!text) return;
-
-        this.parsingIngredients.set(true);
-        this.error.set(null);
-        this.ingredients.set([]);
-
-        let hasParsedItems = false;
-
-        for await (const chunk of this.supabase.parseRecipeTextStream(text, 'ingredients')) {
-            if (chunk.error) {
-                this.parsingIngredients.set(false);
-                this.error.set('Parsen mislukt: ' + chunk.error);
-                return;
-            }
-
-            if (chunk.partial?.items) {
-                hasParsedItems = true;
-                this.ingredients.set(chunk.partial.items);
-            }
-
-            if (chunk.done) {
-                break;
-            }
-        }
-
-        this.parsingIngredients.set(false);
-
-        if (hasParsedItems) {
-            this.rawIngredientsText.set('');
+        if (!text) {
             return;
         }
 
-        if (!this.error()) {
+        this.ingredientsParser.stop();
+        this.error.set(null);
+        this.ingredients.set([]);
+        await this.ingredientsParser.submit({ text, type: 'ingredients' });
+
+        if (!this.ingredientsParser.object?.items && !this.error()) {
             this.error.set('Parsen mislukt: ongeldige response');
         }
     }
 
     async parseSteps() {
         const text = this.rawStepsText().trim();
-        if (!text) return;
-
-        this.parsingSteps.set(true);
-        this.error.set(null);
-        this.steps.set([]);
-
-        let hasParsedItems = false;
-
-        for await (const chunk of this.supabase.parseRecipeTextStream(text, 'steps')) {
-            if (chunk.error) {
-                this.parsingSteps.set(false);
-                this.error.set('Parsen mislukt: ' + chunk.error);
-                return;
-            }
-
-            if (chunk.partial?.items) {
-                hasParsedItems = true;
-                this.steps.set(chunk.partial.items);
-            }
-
-            if (chunk.done) {
-                break;
-            }
-        }
-
-        this.parsingSteps.set(false);
-
-        if (hasParsedItems) {
-            this.rawStepsText.set('');
+        if (!text) {
             return;
         }
 
-        if (!this.error()) {
+        this.stepsParser.stop();
+        this.error.set(null);
+        this.steps.set([]);
+        await this.stepsParser.submit({ text, type: 'steps' });
+
+        if (!this.stepsParser.object?.items && !this.error()) {
             this.error.set('Parsen mislukt: ongeldige response');
+        }
+    }
+
+    private toIngredientForm(ingredient: Partial<ParsedIngredientResult> | undefined): IngredientForm {
+        return {
+            name: ingredient?.name ?? '',
+            amount: typeof ingredient?.amount === 'number' ? ingredient.amount : null,
+            unit: ingredient?.unit ?? '',
+            section_name: ingredient?.section_name ?? null,
+        };
+    }
+
+    private toStepForm(step: Partial<ParsedStepResult> | undefined): StepForm {
+        return {
+            description: step?.description ?? '',
+            section_name: step?.section_name ?? null,
+        };
+    }
+
+    private formatParserError(error: Error | undefined): string {
+        const message = this.extractParserErrorMessage(error);
+        return `Parsen mislukt: ${message ?? 'ongeldige response'}`;
+    }
+
+    private extractParserErrorMessage(error: Error | undefined): string | null {
+        const message = error?.message?.trim();
+
+        if (!message) {
+            return null;
+        }
+
+        try {
+            const parsed = JSON.parse(message) as { error?: unknown };
+
+            return typeof parsed.error === 'string' && parsed.error.trim().length > 0 ? parsed.error.trim() : message;
+        } catch {
+            return message;
         }
     }
 

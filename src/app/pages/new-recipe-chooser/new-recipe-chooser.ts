@@ -21,7 +21,8 @@ export class NewRecipeChooserPage {
             title: 'Upload photos',
             description: 'Turn recipe photos into a draft we can refine together.',
             icon: '📸',
-            enabled: false,
+            href: '/recipes/new/upload',
+            enabled: true,
         },
         {
             title: 'Import from link',

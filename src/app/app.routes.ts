@@ -8,6 +8,11 @@ import { RecipesPage } from './pages/recipes/recipes';
 export const routes: Routes = [
     { path: '', component: Home },
     { path: 'recipes/new', component: NewRecipeChooserPage },
+    {
+        path: 'recipes/new/upload',
+        loadComponent: () =>
+            import('./pages/upload-recipe-photos/upload-recipe-photos').then((m) => m.UploadRecipePhotosPage),
+    },
     { path: 'recipes/new/manual', component: AddRecipePage },
     { path: 'recipes/:id/edit', component: AddRecipePage },
     { path: 'recipes/:id', component: RecipeDetailPage },
