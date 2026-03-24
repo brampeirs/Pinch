@@ -14,6 +14,7 @@ const IngredientSchema = z.object({
     amount: z.number().nullable(),
     unit: z.string(),
     section_name: z.string().nullable(),
+    note: z.string().nullable(),
 });
 
 const IngredientsResponseSchema = z.object({
@@ -44,7 +45,17 @@ Rules:
 - Use title case for section_name when a section exists.
 - Set amount to null when no reliable numeric quantity is present.
 - Use an empty string for unit when no explicit unit is provided.
-- Normalize simple count-based ingredients like "2 eggs" to amount: 2 and unit: "pieces".`;
+- Normalize simple count-based ingredients like "2 eggs" to amount: 2 and unit: "pieces".
+- Extract optional preparation or condition details into note, for example "finely chopped", "melted", "room temperature", "softened", or "sifted".
+- Use null for note when there is no extra preparation or condition detail.
+- Keep the ingredient identity in name. Variety/type words such as "red onion", "dark chocolate", "self-raising flour", or "coconut milk" stay in name, not in note.
+- Do not move section headings into note.
+- Do not include leading punctuation, commas, or parentheses in note.
+
+Examples:
+- "1 onion, finely chopped" -> { "name": "onion", "amount": 1, "unit": "pieces", "section_name": null, "note": "finely chopped" }
+- "200 g butter (room temperature)" -> { "name": "butter", "amount": 200, "unit": "g", "section_name": null, "note": "room temperature" }
+- "100 g dark chocolate, melted" -> { "name": "dark chocolate", "amount": 100, "unit": "g", "section_name": null, "note": "melted" }`;
 
 const STEPS_PROMPT = `You extract recipe preparation steps from raw text for a cooking app.
 

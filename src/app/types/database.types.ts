@@ -42,6 +42,7 @@ export interface Ingredient {
     name: string;
     sort_order: number;
     section_name: string | null;
+    note: string | null;
 }
 
 export interface RecipeStep {

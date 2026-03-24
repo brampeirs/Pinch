@@ -40,6 +40,7 @@ export interface ParsedIngredient {
     amount: number | null;
     unit: string;
     section_name: string | null;
+    note?: string | null;
 }
 
 export interface ParsedStep {
@@ -207,7 +208,14 @@ export class SupabaseService {
             servings?: number;
             is_published?: boolean;
         },
-        ingredients: { name: string; amount?: number; unit?: string; sort_order?: number; section_name?: string }[],
+        ingredients: {
+            name: string;
+            amount?: number;
+            unit?: string;
+            sort_order?: number;
+            section_name?: string | null;
+            note?: string | null;
+        }[],
         steps: { step_number: number; description: string; section_name?: string }[],
     ) {
         // Call edge function instead of direct DB operations
@@ -255,6 +263,7 @@ export class SupabaseService {
             unit?: string;
             sort_order?: number;
             section_name?: string | null;
+            note?: string | null;
         }[],
         steps: { step_number: number; description: string; section_name?: string | null }[],
     ) {
@@ -290,7 +299,8 @@ export class SupabaseService {
                 amount: ing.amount,
                 unit: ing.unit,
                 sort_order: ing.sort_order ?? index,
-                section_name: ing.section_name || null,
+                section_name: this.normalizeOptionalText(ing.section_name),
+                note: this.normalizeOptionalText(ing.note),
             }));
 
             const { error: ingredientsError } = await this.supabase.from('ingredients').insert(ingredientsToInsert);
@@ -358,6 +368,11 @@ export class SupabaseService {
         // URL format: https://<project>.supabase.co/storage/v1/object/public/recipe-images/recipes/filename.jpg
         const match = imageUrl.match(/recipe-images\/(.+)$/);
         return match ? match[1] : null;
+    }
+
+    private normalizeOptionalText(value: string | null | undefined): string | null {
+        const trimmed = value?.trim();
+        return trimmed ? trimmed : null;
     }
 
     // ============ EMBEDDING ============

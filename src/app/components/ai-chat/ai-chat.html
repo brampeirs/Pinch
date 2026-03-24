@@ -130,7 +130,7 @@
                             @let isToolComplete = partState === 'output-available';
 
                             <!-- Text parts with Markdown -->
-                            @if (partType === 'text') {
+                            @if (partType === 'text' && shouldRenderAssistantText(message)) {
                                 <div class="prose prose-img:rounded-xl max-w-none">
                                     <markdown [data]="part.text"></markdown>
                                 </div>

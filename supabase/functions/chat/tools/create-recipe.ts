@@ -14,6 +14,19 @@ or asks to create/add a recipe. Extract the recipe information from the user's m
 
 The tool will save the recipe and return the created recipe data for display.
 
+**LANGUAGE:**
+- If the user explicitly asked to translate the recipe before saving, the recipe fields you pass here must already be translated to that requested language.
+- This applies to title, description, ingredient names, ingredient notes, section names, and steps.
+
+**INGREDIENT STRUCTURING:**
+- Keep the core ingredient identity in the name field.
+- Put preparation/context notes in the note field.
+- Examples:
+  - "1 onion, finely chopped" → { name: "onion", note: "finely chopped" }
+  - "2 eggs, beaten" → { name: "eggs", note: "beaten" }
+  - "200 g butter (room temperature)" → { name: "butter", note: "room temperature" }
+- Do NOT stuff notes like chopped/beaten/melted/room temperature into the ingredient name.
+
 **CRITICAL: If you called chooseCoverImage before this, you MUST include the URL it returned!**
 The chooseCoverImage tool returns: { success: true, url: "https://..." }
 You MUST pass that url value as image_url in the recipe object.

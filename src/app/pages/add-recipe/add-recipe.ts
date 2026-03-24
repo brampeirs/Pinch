@@ -20,6 +20,7 @@ const parsedIngredientSchema = z.object({
     amount: z.number().nullable(),
     unit: z.string(),
     section_name: z.string().nullable(),
+    note: z.string().nullable().optional(),
 });
 
 const parsedIngredientsSchema = z.object({
@@ -54,6 +55,7 @@ interface IngredientForm {
     name: string;
     amount: number | null;
     unit: string;
+    note?: string | null;
     section_name?: string | null;
 }
 
@@ -136,7 +138,7 @@ export class AddRecipePage implements OnInit {
     uploadingImage = signal(false);
 
     // Dynamic lists
-    ingredients = signal<IngredientForm[]>([{ name: '', amount: null, unit: '' }]);
+    ingredients = signal<IngredientForm[]>([{ name: '', amount: null, unit: '', note: '' }]);
     steps = signal<StepForm[]>([{ description: '' }]);
 
     // Categories from DB
@@ -271,6 +273,7 @@ export class AddRecipePage implements OnInit {
                     name: ing.name,
                     amount: ing.amount ? Number(ing.amount) : null,
                     unit: ing.unit || '',
+                    note: ing.note || '',
                     section_name: ing.section_name,
                 })),
             );
@@ -298,7 +301,7 @@ export class AddRecipePage implements OnInit {
     }
 
     addIngredient() {
-        this.ingredients.update((list) => [...list, { name: '', amount: null, unit: '' }]);
+        this.ingredients.update((list) => [...list, { name: '', amount: null, unit: '', note: '' }]);
     }
 
     removeIngredient(index: number) {
@@ -407,6 +410,7 @@ export class AddRecipePage implements OnInit {
             name: ingredient?.name ?? '',
             amount: typeof ingredient?.amount === 'number' ? ingredient.amount : null,
             unit: ingredient?.unit ?? '',
+            ...(typeof ingredient?.note === 'string' ? { note: ingredient.note } : {}),
             section_name: ingredient?.section_name ?? null,
         };
     }
@@ -480,6 +484,7 @@ export class AddRecipePage implements OnInit {
             unit: i.unit || undefined,
             sort_order: idx,
             section_name: i.section_name || undefined,
+            note: (i.note ?? '').trim() || undefined,
         }));
 
         const stepsData = validSteps.map((s, idx) => ({

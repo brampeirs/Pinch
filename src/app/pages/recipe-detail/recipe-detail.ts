@@ -24,6 +24,7 @@ interface Ingredient {
     amount: number;
     unit: string;
     name: string;
+    note: string | null;
     sectionName: string | null;
 }
 
@@ -114,6 +115,7 @@ export class RecipeDetailPage implements OnInit, OnDestroy {
                     amount: Number(ing.amount) || 0,
                     unit: ing.unit || '',
                     name: ing.name,
+                    note: ing.note,
                     sectionName: ing.section_name,
                 }));
 

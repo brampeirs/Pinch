@@ -41,7 +41,9 @@ Workflow:
 
 Rules:
 - Extract all ingredients and all steps. Do not summarize.
-- Preserve the original recipe language.
+- By default, preserve the original recipe language.
+- If the user explicitly asks for translation or says the recipe should be saved in another language, translate the full recipe before calling createRecipe.
+- When translating, translate all recipe content consistently: title, description, ingredient names, ingredient notes, section names, and step descriptions.
 - Estimate description, times, and servings when missing.
 - If chooseCoverImage succeeds, you MUST pass its returned url as image_url into createRecipe.
 - If no category fits well, use the best available general category.`;

@@ -370,6 +370,69 @@ describe('AiChat findRecipe rendering', () => {
         expect(text).toContain('42% match');
     });
 
+    it('hides assistant prose when findRecipe recipe cards are already rendered', () => {
+        const chat = component.chat as unknown as { messages: unknown[] };
+        chat.messages.length = 0;
+        chat.messages.push({
+            id: 'assistant-search-with-prose',
+            role: 'assistant',
+            parts: [
+                { type: 'text', text: 'Here are a few options for you.' },
+                {
+                    type: 'tool-findRecipe',
+                    state: 'output-available',
+                    output: {
+                        recipes: [
+                            {
+                                id: '33333333-3333-3333-3333-333333333333',
+                                title: 'Classic Tomato Soup',
+                                description: 'Velvety smooth tomato soup with fresh basil.',
+                                imageUrl: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=800',
+                                category: 'Soups',
+                                similarity: 0.440050423145294,
+                            },
+                        ],
+                    },
+                },
+            ],
+        });
+
+        TestBed.inject(ChatViewModeService).setOpen(true);
+        fixture.detectChanges();
+
+        const text = fixture.nativeElement.textContent as string;
+        const recipeCards = fixture.nativeElement.querySelectorAll('app-chat-recipe-card');
+
+        expect(recipeCards.length).toBe(1);
+        expect(text).toContain('Classic Tomato Soup');
+        expect(text).not.toContain('Here are a few options for you.');
+    });
+
+    it('keeps assistant text visible when findRecipe returns no recipes', () => {
+        const shouldRenderAssistantText = (
+            component as unknown as {
+                shouldRenderAssistantText: (message: unknown) => boolean;
+            }
+        ).shouldRenderAssistantText.bind(component);
+
+        const message = {
+            id: 'assistant-search-empty',
+            role: 'assistant',
+            parts: [
+                {
+                    type: 'tool-findRecipe',
+                    state: 'output-available',
+                    output: {
+                        recipes: [],
+                    },
+                },
+                { type: 'text', text: 'No recipes found, try a broader search.' },
+            ],
+        };
+
+        expect(shouldRenderAssistantText(message)).toBe(true);
+    });
+
     it('parses and renders streamed soup results when a starter suggestion is sent', async () => {
         fetchSpy.mockResolvedValue(
             createSseResponse([

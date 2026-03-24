@@ -263,6 +263,28 @@ export class AiChat {
         return Array.isArray(parts) ? parts : [];
     }
 
+    protected shouldRenderAssistantText(message: unknown): boolean {
+        return !this.getMessageParts(message).some((part) => this.isCompletedFindRecipeWithRecipes(part));
+    }
+
+    private isCompletedFindRecipeWithRecipes(part: unknown): boolean {
+        if (!part || typeof part !== 'object') {
+            return false;
+        }
+
+        const record = part as {
+            type?: unknown;
+            state?: unknown;
+            output?: { recipes?: unknown };
+        };
+
+        if (record.type !== 'tool-findRecipe' || record.state !== 'output-available') {
+            return false;
+        }
+
+        return Array.isArray(record.output?.recipes) && record.output.recipes.length > 0;
+    }
+
     private isVisibleAssistantPart(part: unknown): boolean {
         if (!part || typeof part !== 'object') {
             return false;

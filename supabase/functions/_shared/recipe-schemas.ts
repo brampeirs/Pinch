@@ -14,6 +14,7 @@ export const ingredientSchema = z.object({
     unit: z.string().optional().nullable(),
     sort_order: z.number().optional().nullable(),
     section_name: z.string().optional().nullable(), // e.g., "De Saus", "Het Deeg"
+    note: z.string().optional().nullable(),
 });
 
 /**
@@ -75,7 +76,11 @@ export const createRecipeToolInputSchema = z.object({
     ingredients: z
         .array(
             ingredientSchema.extend({
-                name: z.string().describe('Ingredient name, e.g. "flour", "butter"'),
+                name: z
+                    .string()
+                    .describe(
+                        'Core ingredient name only, e.g. "flour", "butter", "onion". Do not include prep/context notes like "finely chopped", "beaten", "melted", or "room temperature" here.',
+                    ),
                 amount: z.number().optional().nullable().describe('Quantity amount, e.g. 2, 0.5'),
                 unit: z.string().optional().nullable().describe('Unit of measurement, e.g. "cups", "tbsp", "g"'),
                 sort_order: z
@@ -88,6 +93,13 @@ export const createRecipeToolInputSchema = z.object({
                     .optional()
                     .nullable()
                     .describe('Section name for grouping, e.g. "De Saus", "Het Deeg". Use for complex recipes.'),
+                note: z
+                    .string()
+                    .optional()
+                    .nullable()
+                    .describe(
+                        'Optional preparation/context note for the ingredient, e.g. "finely chopped", "beaten", "melted", or "room temperature". Use null/omit when there is no extra note.',
+                    ),
             }),
         )
         .min(1)
