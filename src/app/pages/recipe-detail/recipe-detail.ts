@@ -289,13 +289,13 @@ export class RecipeDetailPage implements OnInit, OnDestroy {
     }
 
     async copySelectedIngredients() {
-        const content = this.buildCopyContent();
-        if (!content) {
+        const selectedItems = this.buildSelectedCopyItems();
+        if (!selectedItems.length) {
             this.copyIngredientsFeedback.set('error');
             return;
         }
 
-        const copied = await this.copyToClipboard(content);
+        const copied = await this.copyToClipboard(selectedItems);
         this.copyIngredientsFeedback.set(copied ? 'copied' : 'error');
     }
 
@@ -315,25 +315,21 @@ export class RecipeDetailPage implements OnInit, OnDestroy {
         return /\b(salt|pepper)\b/i.test(text);
     }
 
-    private buildCopyContent(): string {
+    private buildSelectedCopyItems(): string[] {
         const selected = this.selectedIngredientIds();
-        const lines: string[] = [];
+        const items: string[] = [];
 
         for (const section of this.copyModalSections()) {
             const chosen = section.ingredients.filter((ingredient) => selected.has(ingredient.id));
             if (!chosen.length) continue;
 
-            if (section.name) {
-                lines.push(`${section.name}:`);
-            }
-
             for (const ingredient of chosen) {
-                // Apple Reminders usually turns each new bullet line into a separate task when pasted.
-                lines.push(`• ${ingredient.displayText}`);
+                const line = section.name ? `${section.name}: ${ingredient.displayText}` : ingredient.displayText;
+                items.push(line);
             }
         }
 
-        return lines.join('\n');
+        return items;
     }
 
     private formatIngredientForCopy(ingredient: Ingredient): string {
@@ -343,14 +339,26 @@ export class RecipeDetailPage implements OnInit, OnDestroy {
         return prefix ? `${prefix} ${ingredient.name}` : ingredient.name;
     }
 
-    private async copyToClipboard(content: string): Promise<boolean> {
+    private async copyToClipboard(items: string[]): Promise<boolean> {
+        const plainText = items.join('\n');
+        const htmlList = `<ul>${items.map((item) => `<li>${this.escapeHtml(item)}</li>`).join('')}</ul>`;
+
         try {
-            await navigator.clipboard.writeText(content);
+            if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+                const clipboardItem = new ClipboardItem({
+                    'text/plain': new Blob([plainText], { type: 'text/plain' }),
+                    'text/html': new Blob([htmlList], { type: 'text/html' }),
+                });
+                await navigator.clipboard.write([clipboardItem]);
+                return true;
+            }
+
+            await navigator.clipboard.writeText(plainText);
             return true;
         } catch {
             try {
                 const textArea = document.createElement('textarea');
-                textArea.value = content;
+                textArea.value = plainText;
                 textArea.setAttribute('readonly', '');
                 textArea.style.position = 'fixed';
                 textArea.style.left = '-9999px';
@@ -363,6 +371,15 @@ export class RecipeDetailPage implements OnInit, OnDestroy {
                 return false;
             }
         }
+    }
+
+    private escapeHtml(value: string): string {
+        return value
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
     }
 
     /**
