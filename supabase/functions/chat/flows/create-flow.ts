@@ -1,4 +1,4 @@
-import { streamText, stepCountIs, type ModelMessage } from 'npm:ai';
+import { streamText, stepCountIs, type LanguageModel, type ModelMessage } from 'npm:ai';
 import { SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 import { createCreateRecipeTool } from '../tools/create-recipe.ts';
 import { createGetCategoriesTool } from '../tools/get-categories.ts';
@@ -13,13 +13,20 @@ Your job is to extract recipe data from the user's message and save it to the da
 - By default, preserve the original language of the recipe.
 - If the user explicitly asks for translation or says the recipe should be saved in another language, translate the full recipe before calling createRecipe.
 - When translating, translate all recipe content consistently: title, description, ingredient names, ingredient notes, section names, and step descriptions.
-- If the recipe has sections (e.g. "De Saus", "Het Deeg"), use section_name on ingredients and steps.
 - For ingredients, keep the core ingredient in name and put preparation/context into note.
 - Examples: "1 onion, finely chopped" → name "onion" + note "finely chopped"; "2 eggs, beaten" → name "eggs" + note "beaten"; "200 g butter (room temperature)" → name "butter" + note "room temperature".
 - Do not stuff notes like chopped, beaten, melted, softened, or room temperature into the ingredient name unless they are truly part of the ingredient identity.
 - Estimate prep_time and cook_time in minutes if not explicitly stated.
 - Estimate servings if not explicitly stated.
 - Write a short, appetizing description if the user didn't provide one.
+
+**STEP SECTIONS (CRITICAL):**
+- Use section_name on steps ONLY when the user's recipe explicitly contains a heading or label for that section.
+- Examples of explicit headings: "For the dressing", "Sauce", "Afwerking", "Preparation", "Assembly".
+- Do NOT invent step sections just because a few steps seem related or form a logical sub-task.
+- Do NOT create a section that would break the linear execution order of the recipe.
+- When in doubt, set section_name to null and preserve the original step order.
+- The same rule applies to ingredient sections: only use section_name when the source explicitly shows a heading.
 
 **CATEGORY SELECTION:**
 - Call getCategories to get the list of available categories.
@@ -70,7 +77,7 @@ The user has attached ${imageCount} image(s). Classify each image:
  * When images are present, also includes chooseCoverImage
  */
 export function runCreateFlow(
-    aiGateway: { languageModel: (model: string) => unknown },
+    aiGateway: { languageModel: (model: string) => LanguageModel },
     supabase: SupabaseClient,
     messages: ModelMessage[],
     images: Array<{ url: string; mediaType: string }> = [],

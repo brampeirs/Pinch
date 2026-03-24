@@ -62,10 +62,18 @@ const STEPS_PROMPT = `You extract recipe preparation steps from raw text for a c
 Rules:
 - Split the text into clear, actionable steps in the original order.
 - Preserve the original language of the step descriptions. Do not translate.
-- Detect section headings such as "Sauce", "Finishing", or "Breadcrumbs" and use them as section_name for the steps that follow.
-- If there is no section heading, use null for section_name.
+- Detect EXPLICIT section headings in the source text such as "Sauce", "Finishing", "Breadcrumbs", "For the dressing", or "Afwerking" and use them as section_name for the steps that follow.
+- Only use section_name when a clear heading is explicitly present in the source material. Do NOT invent sections.
+- Do NOT create a section just because steps seem related or because a sub-preparation is mentioned conceptually.
+- If there is no explicit section heading in the source, use null for section_name.
 - Use title case for section_name when a section exists.
-- Do not omit important details from the source text.`;
+- Do not omit important details from the source text.
+- Preserve the original step order. Do not reorder steps to group them by inferred sections.
+
+Examples of when section_name must be null:
+- Plain linear instructions without headings: "1. Mix flour and water. 2. Knead. 3. Let rise." → all steps have section_name: null
+- Instructions mentioning a sub-component without an explicit heading: "Mix the dough. For the sauce, combine tomatoes and basil. Then combine both." → only use section_name if "For the sauce" or similar is a clear heading in the source
+- Steps that seem related but have no heading: "Chop the onions. Sauté them. Add garlic." → all section_name: null unless there is an explicit heading like "Preparation" or "Sautéing"`;
 
 function createModel() {
     const gatewayApiKey = Deno.env.get('AI_GATEWAY_API_KEY');

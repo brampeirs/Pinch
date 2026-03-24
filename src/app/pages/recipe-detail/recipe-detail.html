@@ -240,12 +240,12 @@
                                     </h3>
                                 }
                                 <ol class="space-y-6">
-                                    @for (step of section.steps; track step.step) {
+                                    @for (step of section.steps; track step.step; let stepIndex = $index) {
                                         <li class="flex gap-4">
                                             <span
                                                 class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white"
                                             >
-                                                {{ step.step }}
+                                                {{ stepIndex + 1 }}
                                             </span>
                                             <p class="pt-1 leading-relaxed text-slate-700">
                                                 {{ step.description }}

@@ -27,6 +27,12 @@ The tool will save the recipe and return the created recipe data for display.
   - "200 g butter (room temperature)" → { name: "butter", note: "room temperature" }
 - Do NOT stuff notes like chopped/beaten/melted/room temperature into the ingredient name.
 
+**STEP SECTIONS:**
+- Only use step section_name when the source recipe explicitly contains a heading or section label.
+- Do NOT invent step sections from semantic grouping or sub-tasks.
+- Preserve the original linear step order.
+- When in doubt, use null for step section_name.
+
 **CRITICAL: If you called chooseCoverImage before this, you MUST include the URL it returned!**
 The chooseCoverImage tool returns: { success: true, url: "https://..." }
 You MUST pass that url value as image_url in the recipe object.

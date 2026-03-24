@@ -184,4 +184,32 @@ describe('AddRecipePage', () => {
         expect(component.error()).toBe('Parsen mislukt: bad response');
         expect(component.parsingIngredients()).toBe(false);
     });
+
+    it('parses plain linear steps without headings as section_name: null', async () => {
+        const component = fixture.componentInstance;
+        const plainLinearSteps = [
+            { description: 'Mix flour and water.', section_name: null },
+            { description: 'Knead the dough.', section_name: null },
+            { description: 'Let it rise for 1 hour.', section_name: null },
+        ];
+
+        component.rawStepsText.set('Mix flour and water. Knead the dough. Let it rise for 1 hour.');
+        supabaseService.parseRecipeStreamFetch.mockResolvedValueOnce(
+            createStructuredObjectStreamResponse([JSON.stringify({ items: plainLinearSteps })]),
+        );
+
+        await component.parseSteps();
+
+        expect(supabaseService.parseRecipeStreamFetch).toHaveBeenCalledTimes(1);
+        expect(JSON.parse(supabaseService.parseRecipeStreamFetch.mock.calls[0][1].body as string)).toEqual({
+            text: 'Mix flour and water. Knead the dough. Let it rise for 1 hour.',
+            type: 'steps',
+        });
+        expect(component.steps()).toEqual(plainLinearSteps);
+        // Verify all steps have section_name: null
+        expect(component.steps().every((step) => step.section_name === null)).toBe(true);
+        expect(component.rawStepsText()).toBe('');
+        expect(component.error()).toBeNull();
+        expect(component.parsingSteps()).toBe(false);
+    });
 });

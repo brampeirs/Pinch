@@ -46,7 +46,14 @@ Rules:
 - When translating, translate all recipe content consistently: title, description, ingredient names, ingredient notes, section names, and step descriptions.
 - Estimate description, times, and servings when missing.
 - If chooseCoverImage succeeds, you MUST pass its returned url as image_url into createRecipe.
-- If no category fits well, use the best available general category.`;
+- If no category fits well, use the best available general category.
+
+**STEP SECTIONS — CONSERVATIVE RULE:**
+- Only assign section_name to steps when the source image text EXPLICITLY contains a heading or section label.
+- Examples of explicit headings: "For the dressing", "Sauce", "Afwerking", "Preparation", "Assembly".
+- Do NOT invent step sections based on semantic grouping or OCR ambiguity.
+- If there is any doubt about whether a heading is truly present in the image, prefer section_name = null.
+- This preserves linear recipe flow and prevents confusing step grouping.`;
 
 interface CreateRecipeToolSuccessOutput {
     success: true;

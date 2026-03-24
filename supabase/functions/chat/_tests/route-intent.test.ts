@@ -112,6 +112,33 @@ async function fetchRecipeIngredients(recipeId: string) {
     return data[0].ingredients;
 }
 
+async function fetchRecipeSteps(recipeId: string) {
+    const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/recipes?select=id,recipe_steps(step_number,description,section_name)&id=eq.${encodeURIComponent(recipeId)}`,
+        {
+            headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+        },
+    );
+
+    const body = await response.text();
+    assert(response.ok, `Expected recipe lookup to succeed for ${recipeId}. Status: ${response.status}. Body: ${body}`);
+
+    const data = JSON.parse(body) as Array<{
+        id: string;
+        recipe_steps: Array<{
+            step_number: number;
+            description: string;
+            section_name: string | null;
+        }>;
+    }>;
+
+    assert(data.length === 1, `Expected exactly one recipe row for ${recipeId}. Body: ${body}`);
+    return data[0].recipe_steps;
+}
+
 async function sendChat(userText: string, opts: ChatRequestOpts = {}): Promise<ChatResult> {
     const messages = opts.messages ?? [
         { id: `test-${Date.now()}`, role: 'user', parts: [{ type: 'text', text: userText }] },
@@ -487,5 +514,134 @@ Steps:
     assert(
         storedNames.includes('boter'),
         `Expected stored Dutch ingredient "boter". Ingredients: ${JSON.stringify(storedIngredients)}`,
+    );
+});
+
+// ── Step sections (Slice 3) ──────────────────────────────────────
+// Verify that step sections are only used when explicit headings are present
+
+Deno.test('create: linear recipe without explicit step headings → all steps have section_name: null', async () => {
+    const recipeTitle = `Linear Recipe ${Date.now()}`;
+    const r = await sendChat(
+        `Save this recipe:
+
+Title: ${recipeTitle}
+Servings: 2
+
+Ingredients:
+- 2 cups flour
+- 1 cup water
+- 1 tsp salt
+
+Steps:
+1. Mix flour and water together.
+2. Add salt to the mixture.
+3. Knead the dough for 10 minutes.
+4. Let it rest for 30 minutes.
+5. Shape into a ball and serve.`,
+    );
+
+    assertEquals(r.status, 200);
+    assert(
+        r.toolNames.includes('createRecipe'),
+        `Expected createRecipe tool call, got: ${r.toolNames.join(', ') || 'none'}. Events: ${r.events.join(', ')}`,
+    );
+
+    const createOutput = r.toolOutputs['createRecipe'];
+    assert(createOutput?.success, `Expected createRecipe to succeed. Output: ${JSON.stringify(createOutput)}`);
+
+    const recipeId = createOutput?.recipe?.id;
+    assert(recipeId, `Expected created recipe id. Output: ${JSON.stringify(createOutput)}`);
+
+    const storedSteps = await fetchRecipeSteps(recipeId);
+    assertEquals(storedSteps.length, 5, `Expected 5 steps. Got: ${JSON.stringify(storedSteps)}`);
+
+    // All steps should have section_name: null
+    for (const step of storedSteps) {
+        assertEquals(
+            step.section_name,
+            null,
+            `Expected step "${step.description}" to have section_name: null, but got: ${step.section_name}`,
+        );
+    }
+});
+
+Deno.test('create: recipe with explicit step headings → steps preserve section names', async () => {
+    const recipeTitle = `Recipe with Sections ${Date.now()}`;
+    const r = await sendChat(
+        `Save this recipe:
+
+Title: ${recipeTitle}
+Servings: 4
+
+Ingredients:
+- 2 cups flour
+- 1 cup butter
+- 1 cup sugar
+- 2 eggs
+
+Steps:
+Preparation:
+1. Preheat oven to 350°F.
+2. Mix flour and sugar in a bowl.
+
+Mixing:
+3. Cream butter and eggs together.
+4. Combine the flour mixture with the butter mixture.
+
+Baking:
+5. Pour into a baking pan.
+6. Bake for 30 minutes until golden.`,
+    );
+
+    assertEquals(r.status, 200);
+    assert(
+        r.toolNames.includes('createRecipe'),
+        `Expected createRecipe tool call, got: ${r.toolNames.join(', ') || 'none'}. Events: ${r.events.join(', ')}`,
+    );
+
+    const createOutput = r.toolOutputs['createRecipe'];
+    assert(createOutput?.success, `Expected createRecipe to succeed. Output: ${JSON.stringify(createOutput)}`);
+
+    const recipeId = createOutput?.recipe?.id;
+    assert(recipeId, `Expected created recipe id. Output: ${JSON.stringify(createOutput)}`);
+
+    const storedSteps = await fetchRecipeSteps(recipeId);
+    assertEquals(storedSteps.length, 6, `Expected 6 steps. Got: ${JSON.stringify(storedSteps)}`);
+
+    // Steps 1-2 should have section_name "Preparation"
+    assertEquals(
+        storedSteps[0].section_name,
+        'Preparation',
+        `Expected step 1 to have section_name "Preparation", got: ${storedSteps[0].section_name}`,
+    );
+    assertEquals(
+        storedSteps[1].section_name,
+        'Preparation',
+        `Expected step 2 to have section_name "Preparation", got: ${storedSteps[1].section_name}`,
+    );
+
+    // Steps 3-4 should have section_name "Mixing"
+    assertEquals(
+        storedSteps[2].section_name,
+        'Mixing',
+        `Expected step 3 to have section_name "Mixing", got: ${storedSteps[2].section_name}`,
+    );
+    assertEquals(
+        storedSteps[3].section_name,
+        'Mixing',
+        `Expected step 4 to have section_name "Mixing", got: ${storedSteps[3].section_name}`,
+    );
+
+    // Steps 5-6 should have section_name "Baking"
+    assertEquals(
+        storedSteps[4].section_name,
+        'Baking',
+        `Expected step 5 to have section_name "Baking", got: ${storedSteps[4].section_name}`,
+    );
+    assertEquals(
+        storedSteps[5].section_name,
+        'Baking',
+        `Expected step 6 to have section_name "Baking", got: ${storedSteps[5].section_name}`,
     );
 });

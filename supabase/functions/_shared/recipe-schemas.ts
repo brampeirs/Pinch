@@ -113,7 +113,7 @@ export const createRecipeToolInputSchema = z.object({
                     .string()
                     .optional()
                     .nullable()
-                    .describe('Section name for grouping, e.g. "Voorbereiding", "De Saus". Use for complex recipes.'),
+                    .describe('Section name for grouping, e.g. "Voorbereiding", "De Saus". ONLY use when the source recipe explicitly contains a heading. Do not invent sections. Preserve linear execution order. When in doubt, use null.'),
             }),
         )
         .min(1)
