@@ -340,19 +340,10 @@ export class RecipeDetailPage implements OnInit, OnDestroy {
     }
 
     private async copyToClipboard(items: string[]): Promise<boolean> {
-        const plainText = items.join('\n');
-        const htmlList = `<ul>${items.map((item) => `<li>${this.escapeHtml(item)}</li>`).join('')}</ul>`;
+        // Apple Reminders on macOS splits best when pasting plain text with CRLF line breaks.
+        const plainText = items.join('\r\n');
 
         try {
-            if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
-                const clipboardItem = new ClipboardItem({
-                    'text/plain': new Blob([plainText], { type: 'text/plain' }),
-                    'text/html': new Blob([htmlList], { type: 'text/html' }),
-                });
-                await navigator.clipboard.write([clipboardItem]);
-                return true;
-            }
-
             await navigator.clipboard.writeText(plainText);
             return true;
         } catch {
@@ -371,15 +362,6 @@ export class RecipeDetailPage implements OnInit, OnDestroy {
                 return false;
             }
         }
-    }
-
-    private escapeHtml(value: string): string {
-        return value
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#39;');
     }
 
     /**
