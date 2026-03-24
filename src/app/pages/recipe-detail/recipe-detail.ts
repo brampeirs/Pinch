@@ -78,6 +78,9 @@ export class RecipeDetailPage implements OnInit, OnDestroy {
     error = signal<string | null>(null);
     deleting = signal(false);
     showDeleteConfirm = signal(false);
+    showCopyIngredientsModal = signal(false);
+    selectedIngredientIds = signal<Set<string>>(new Set());
+    copyIngredientsFeedback = signal<'idle' | 'copied' | 'error'>('idle');
 
     ngOnInit() {
         // Subscribe to route param changes so navigation between recipes works
@@ -193,6 +196,24 @@ export class RecipeDetailPage implements OnInit, OnDestroy {
         }));
     });
 
+    copyModalSections = computed(() => {
+        const sections = this.adjustedIngredientSections();
+        let counter = 0;
+
+        return sections.map((section) => ({
+            name: section.name,
+            ingredients: section.ingredients.map((ingredient) => ({
+                id: `ingredient-${counter++}`,
+                displayText: this.formatIngredientForCopy(ingredient),
+            })),
+        }));
+    });
+
+    selectedCount = computed(() => this.selectedIngredientIds().size);
+    totalSelectableIngredients = computed(() =>
+        this.copyModalSections().reduce((total, section) => total + section.ingredients.length, 0),
+    );
+
     decreaseServings() {
         if (this.servings() > 1) {
             this.servings.update((v) => v - 1);
@@ -233,6 +254,114 @@ export class RecipeDetailPage implements OnInit, OnDestroy {
         }
 
         this.router.navigate(['/']);
+    }
+
+    openCopyIngredientsModal() {
+        this.showCopyIngredientsModal.set(true);
+        this.copyIngredientsFeedback.set('idle');
+        this.selectedIngredientIds.set(this.getDefaultSelectedIngredientIds());
+    }
+
+    closeCopyIngredientsModal() {
+        this.showCopyIngredientsModal.set(false);
+        this.copyIngredientsFeedback.set('idle');
+    }
+
+    toggleIngredientSelection(ingredientId: string) {
+        this.selectedIngredientIds.update((selected) => {
+            const next = new Set(selected);
+            if (next.has(ingredientId)) {
+                next.delete(ingredientId);
+            } else {
+                next.add(ingredientId);
+            }
+            return next;
+        });
+    }
+
+    selectAllIngredients() {
+        const allIds = this.copyModalSections().flatMap((section) => section.ingredients.map((ingredient) => ingredient.id));
+        this.selectedIngredientIds.set(new Set(allIds));
+    }
+
+    clearSelectedIngredients() {
+        this.selectedIngredientIds.set(new Set());
+    }
+
+    async copySelectedIngredients() {
+        const selectedItems = this.buildSelectedCopyItems();
+        if (!selectedItems.length) {
+            this.copyIngredientsFeedback.set('error');
+            return;
+        }
+
+        const copied = await this.copyToClipboard(selectedItems);
+        this.copyIngredientsFeedback.set(copied ? 'copied' : 'error');
+    }
+
+    private getDefaultSelectedIngredientIds(): Set<string> {
+        const selected = new Set<string>();
+        for (const section of this.copyModalSections()) {
+            for (const ingredient of section.ingredients) {
+                if (!this.isLikelyPantryStaple(ingredient.displayText)) {
+                    selected.add(ingredient.id);
+                }
+            }
+        }
+        return selected;
+    }
+
+    private isLikelyPantryStaple(text: string): boolean {
+        return /\b(salt|pepper)\b/i.test(text);
+    }
+
+    private buildSelectedCopyItems(): string[] {
+        const selected = this.selectedIngredientIds();
+        const items: string[] = [];
+
+        for (const section of this.copyModalSections()) {
+            const chosen = section.ingredients.filter((ingredient) => selected.has(ingredient.id));
+            if (!chosen.length) continue;
+
+            for (const ingredient of chosen) {
+                const line = section.name ? `${section.name}: ${ingredient.displayText}` : ingredient.displayText;
+                items.push(line);
+            }
+        }
+
+        return items;
+    }
+
+    private formatIngredientForCopy(ingredient: Ingredient): string {
+        const amount = ingredient.amount ? `${ingredient.amount}` : '';
+        const unit = ingredient.unit?.trim() || '';
+        const prefix = [amount, unit].filter(Boolean).join(' ').trim();
+        return prefix ? `${prefix} ${ingredient.name}` : ingredient.name;
+    }
+
+    private async copyToClipboard(items: string[]): Promise<boolean> {
+        // Apple Reminders on macOS splits best when pasting plain text with CRLF line breaks.
+        const plainText = items.join('\r\n');
+
+        try {
+            await navigator.clipboard.writeText(plainText);
+            return true;
+        } catch {
+            try {
+                const textArea = document.createElement('textarea');
+                textArea.value = plainText;
+                textArea.setAttribute('readonly', '');
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-9999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                const copied = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                return copied;
+            } catch {
+                return false;
+            }
+        }
     }
 
     /**
